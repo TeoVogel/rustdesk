@@ -25,12 +25,13 @@ class KVMService {
 
   void start(KVMState kvmState) {
     this.kvmState = kvmState;
-    timer = Timer.periodic(Duration(seconds: kvmServiceInterval), (Timer t) {
+    /*timer = Timer.periodic(Duration(seconds: kvmServiceInterval), (Timer t) {
       sendHeartBeat();
-    });
+    });*/
   }
 
   void sendHeartBeat() async {
+    print("HEARTBEAT SENT");
     if (kvmState.authToken != null && kvmState.registeredDeviceId != null) {
       if (model.isStart) {
         final currentRustId = model.serverId.value.text.removeAllWhitespace;
@@ -50,10 +51,10 @@ class KVMService {
             rustId: sentRustId,
             rustPass: sentRustPass,
           );
-          debugPrint(sentRustId);
-          debugPrint(sentRustPass);
-          lastKnownRustId = sentRustId;
-          lastKnownRustPass = sentRustPass;
+          debugPrint("current: $currentRustId, sent: $sentRustId");
+          debugPrint("current: $currentRustPass, sent: $sentRustPass");
+          lastKnownRustId = currentRustId;
+          lastKnownRustPass = currentRustPass;
         } on KVMAuthError {
           kvmState.setAuthToken(null);
         } on KVMApiError {
