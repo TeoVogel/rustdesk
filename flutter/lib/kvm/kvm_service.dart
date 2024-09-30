@@ -1,9 +1,10 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/kvm/kvm_api.dart';
 import 'package:flutter_hbb/kvm/kvm_state.dart';
+import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:get/get.dart';
 
 class KVMService {
@@ -23,11 +24,16 @@ class KVMService {
   late KVMState kvmState;
   Timer? timer;
 
-  void start(KVMState kvmState) {
+  void start(KVMState kvmState) async {
     this.kvmState = kvmState;
-    /*timer = Timer.periodic(Duration(seconds: kvmServiceInterval), (Timer t) {
-      sendHeartBeat();
-    });*/
+    setHeartbeatRefreshRate();
+  }
+
+  static void setHeartbeatRefreshRate() {
+    platformFFI.invokeMethod(
+      AndroidKVMChannel.kSetHeartbeatRefreshRate,
+      kHeartbeatDefaultRefreshRate,
+    );
   }
 
   void sendHeartBeat() async {

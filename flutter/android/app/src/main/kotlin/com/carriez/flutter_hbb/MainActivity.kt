@@ -217,6 +217,11 @@ class MainActivity : FlutterActivity() {
                         result.success(false)
                     }
                 }
+                SET_HEARTBEAT_REFRESH_RATE -> {
+                    mainService?.setHeartbeatRefreshRate(call.arguments  as Int)
+                    result.success(true)
+
+                }
                 else -> {
                     result.error("-1", "No such method", null)
                 }

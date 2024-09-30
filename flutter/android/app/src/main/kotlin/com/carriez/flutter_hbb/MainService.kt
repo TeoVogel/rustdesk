@@ -154,6 +154,10 @@ class MainService : Service() {
     private var serviceHandler: Handler? = null
 
     // ## KVM integration
+    private var heartbeatRefreshRate = HEARTBEAT_DEFAULT_REFRESH_RATE
+    fun setHeartbeatRefreshRate(rate: Int) {
+        heartbeatRefreshRate = rate
+    }
     private val heartbeatHandler = Handler(Looper.getMainLooper())
     private val heartbeatRunnable = object : Runnable {
         override fun run() {
@@ -162,8 +166,7 @@ class MainService : Service() {
                 "send_kvm_heartbeat",
                 null
             )
-            // 20 seconds, make it configurable in the future
-            heartbeatHandler.postDelayed(this, 20 * 1000)
+            heartbeatHandler.postDelayed(this, heartbeatRefreshRate * 1000L)
         }
     }
 

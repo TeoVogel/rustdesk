@@ -44,6 +44,10 @@ const val GET_START_ON_BOOT_OPT = "get_start_on_boot_opt"
 const val SET_START_ON_BOOT_OPT = "set_start_on_boot_opt"
 const val SYNC_APP_DIR_CONFIG_PATH = "sync_app_dir"
 
+// ## KVM integration
+const val HEARTBEAT_DEFAULT_REFRESH_RATE = 20
+const val SET_HEARTBEAT_REFRESH_RATE = "set_heartbeat_refresh_rate"
+
 const val KEY_SHARED_PREFERENCES = "KEY_SHARED_PREFERENCES"
 const val KEY_START_ON_BOOT_OPT = "KEY_START_ON_BOOT_OPT"
 const val KEY_APP_DIR_CONFIG_PATH = "KEY_APP_DIR_CONFIG_PATH"
