@@ -32,96 +32,125 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Register device")),
-      body: FutureBuilder(
-        future: fetchTenants(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-
-          if (fetchError != null) {
-            return Center(
-              child: Text(fetchError!),
-            );
-          }
-
-          final dropdownTenants = [
-            "Select tenant",
-            ...snapshot.data!.toList().map((tenant) => tenant.toString())
-          ];
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Container(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                  child: DropdownButton<String>(
-                    hint: Text("Select tenant"),
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    value: selectedTenant != null
-                        ? selectedTenant.toString()
-                        : "Select tenant",
-                    items: dropdownTenants
-                        .map(
-                          (tenant) => DropdownMenuItem<String>(
-                            value: tenant.toString(),
-                            child: Text(tenant.toString()),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        context.read<KVMState>().setSelectedFolder(null);
-                        selectedTenant = snapshot.data!
-                            .toList()
-                            .firstWhereOrNull(
-                                (tenant) => tenant.toString() == value);
-                      });
-                    },
-                    isExpanded: true,
-                  ),
-                ),
+    return Material(
+      child: CustomScrollView(
+        slivers: [
+          SliverAppBar.large(
+            flexibleSpace: Padding(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + kToolbarHeight,
+                bottom: 16,
               ),
-              if (selectedTenant != null)
-                Expanded(child: KVMFolderPicker(tenantId: selectedTenant!.id))
-              else
-                Spacer(),
-              Builder(builder: (context) {
-                final selectedFolder = context.select<KVMState, KVMFolder?>(
-                    (state) => state.selectedFolder);
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: FilledButton(
-                    onPressed: selectedFolder != null && !isRegisteringDevice
-                        ? () {
-                            _registerDevice(selectedFolder);
-                          }
-                        : null,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text("Register device"),
-                        if (isRegisteringDevice)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8),
-                            child: SizedBox.square(
-                                dimension: 16,
-                                child: CircularProgressIndicator()),
-                          ),
-                      ],
+              child: Center(
+                  child: Image.asset(
+                "assets/dex_logo.png",
+                scale: 1,
+              )),
+            ),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(24),
+                    bottomRight: Radius.circular(24))),
+          ),
+          SliverFillRemaining(
+            child: FutureBuilder(
+              future: fetchTenants(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+
+                if (fetchError != null) {
+                  return Center(
+                    child: Text(fetchError!),
+                  );
+                }
+
+                final dropdownTenants = [
+                  "Select tenant",
+                  ...snapshot.data!.toList().map((tenant) => tenant.toString())
+                ];
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Container(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.1),
+                        child: DropdownButton<String>(
+                          hint: Text("Select tenant"),
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          value: selectedTenant != null
+                              ? selectedTenant.toString()
+                              : "Select tenant",
+                          items: dropdownTenants
+                              .map(
+                                (tenant) => DropdownMenuItem<String>(
+                                  value: tenant.toString(),
+                                  child: Text(tenant.toString()),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              context.read<KVMState>().setSelectedFolder(null);
+                              selectedTenant = snapshot.data!
+                                  .toList()
+                                  .firstWhereOrNull(
+                                      (tenant) => tenant.toString() == value);
+                            });
+                          },
+                          isExpanded: true,
+                        ),
+                      ),
                     ),
-                  ),
+                    if (selectedTenant != null)
+                      Expanded(
+                          child: KVMFolderPicker(tenantId: selectedTenant!.id))
+                    else
+                      Spacer(),
+                    Builder(builder: (context) {
+                      final selectedFolder =
+                          context.select<KVMState, KVMFolder?>(
+                              (state) => state.selectedFolder);
+                      return Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: ElevatedButton(
+                          onPressed:
+                              selectedFolder != null && !isRegisteringDevice
+                                  ? () {
+                                      _registerDevice(selectedFolder);
+                                    }
+                                  : null,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text("Register device"),
+                              if (isRegisteringDevice)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: SizedBox.square(
+                                      dimension: 16,
+                                      child: CircularProgressIndicator()),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    })
+                  ],
                 );
-              })
-            ],
-          );
-        },
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
