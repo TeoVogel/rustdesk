@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_hbb/kvm/kvm_routing_utils.dart';
 import 'package:flutter_hbb/kvm/kvm_state.dart';
-import 'package:flutter_hbb/kvm/pages/kvm_folders_page.dart';
 import 'package:flutter_hbb/kvm/kvm_api.dart';
 import 'package:provider/provider.dart';
 
@@ -27,7 +27,7 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
   void initState() {
     SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
       if (context.read<KVMState>().authToken != null) {
-        _loginSuccess();
+        _loginSuccess(false);
       }
     });
     super.initState();
@@ -183,7 +183,7 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
       });
       final authToken = await KVMApi.login(username, password);
       context.read<KVMState>().setAuthToken(authToken);
-      _loginSuccess();
+      _loginSuccess(true);
     } on KVMApiError catch (error) {
       setState(() {
         signInError = error.message;
@@ -194,12 +194,43 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
     });
   }
 
-  void _loginSuccess() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (BuildContext context) => KVMFoldersPage(),
-      ),
-    );
+  void _loginSuccess(bool deviceAlreadyEnrolled) async {
+    if (deviceAlreadyEnrolled) {
+      if (await showReEnrollDeviceDialog()) {
+        KVMRoutingUtils.goToFoldersPage(context);
+      } else {
+        KVMRoutingUtils.goToRustDeskHomePage(context);
+      }
+    } else {
+      KVMRoutingUtils.goToFoldersPage(context);
+    }
+  }
+
+  Future<bool> showReEnrollDeviceDialog() async {
+    return await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) {
+              return AlertDialog(
+                title: Text("El dispositivo ya está registrado"),
+                content: Text(
+                    "Deseas registrar el dispositivo en una nueva carpeta o usar la existente?"),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(false);
+                    },
+                    child: Text("Usar carpeta existente"),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(true);
+                    },
+                    child: Text("Nueva carpeta"),
+                  ),
+                ],
+              );
+            }) ??
+        false;
   }
 }

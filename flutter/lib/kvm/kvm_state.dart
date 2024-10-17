@@ -6,6 +6,8 @@ class KVMState with ChangeNotifier {
   KVMFolder? selectedFolder;
   int? registeredDeviceId;
 
+  bool get isKVMSetedup => authToken != null && selectedFolder != null;
+
   void setAuthToken(String? authToken) {
     if (this.authToken != authToken) {
       this.authToken = authToken;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_hbb/kvm/kvm_routing_utils.dart';
 import 'package:flutter_hbb/kvm/kvm_state.dart';
 import 'package:flutter_hbb/kvm/models/kvm_folder.dart';
 import 'package:flutter_hbb/kvm/models/kvm_tenant.dart';
@@ -174,19 +175,21 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
         deviceName,
         authToken: context.read<KVMState>().authToken,
       );
-      context.read<KVMState>().setRegisteredDeviceId(registeredDeviceId);
-      Navigator.pop(context);
+
+      _registerDeviceSuccess(registeredDeviceId);
     } on KVMApiError catch (error) {
       displayErrorSnackbar(error.message);
     } on KVMAuthError catch (error) {
-      context.read<KVMState>().setAuthToken(null);
-      Navigator.pop(context);
-
-      displayErrorSnackbar(error.message);
+      _authError(error);
     }
     setState(() {
       isRegisteringDevice = false;
     });
+  }
+
+  void _registerDeviceSuccess(int registeredDeviceId) async {
+    context.read<KVMState>().setRegisteredDeviceId(registeredDeviceId);
+    KVMRoutingUtils.goToRustDeskHomePage(context);
   }
 
   Future<String?> showDialogNamePicker() {
@@ -237,12 +240,15 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
 
       displayErrorSnackbar(error.message);
     } on KVMAuthError catch (error) {
-      context.read<KVMState>().setAuthToken(null);
-      Navigator.pop(context);
-
-      displayErrorSnackbar(error.message);
+      _authError(error);
     }
     return [];
+  }
+
+  void _authError(KVMAuthError error) {
+    context.read<KVMState>().setAuthToken(null);
+    KVMRoutingUtils.goToFoldersPage(context);
+    displayErrorSnackbar(error.message);
   }
 
   void displayErrorSnackbar(String message) {
