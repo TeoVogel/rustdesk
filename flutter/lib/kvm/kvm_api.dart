@@ -16,7 +16,7 @@ abstract class KVMApi {
   static Future<String> login(String username, String password) async {
     final endpoint = "auth/token";
     try {
-      var headers = getKVMHttpHeaders(null);
+      Map<String, String> headers = {};
       headers['Content-Type'] = "application/x-www-form-urlencoded";
       final response = await http.post(
         Uri.parse(getKVMApiUrl(endpoint)),
