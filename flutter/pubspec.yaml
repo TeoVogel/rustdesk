@@ -104,6 +104,8 @@ dependencies:
   pull_down_button: ^0.9.3
   device_info_plus: ^9.1.0
   qr_flutter: ^4.1.0
+  #KVM integration
+  flutter_secure_storage: ^9.2.2
 
 dev_dependencies:
   icons_launcher: ^2.0.4
