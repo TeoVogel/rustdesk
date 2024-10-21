@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/kvm/data/kvm_api.dart';
-import 'package:flutter_hbb/kvm/domain/kvm_state.dart';
+import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
 import 'package:provider/provider.dart';
 
@@ -51,7 +51,8 @@ class _KVMFolderPickerState extends State<KVMFolderPicker> {
   Widget getFolderWidget(KVMFolder folder, {isRoot = false}) {
     return Builder(builder: (context) {
       final selectedFolder =
-          context.select<KVMState, KVMFolder?>((state) => state.selectedFolder);
+          context.select<KVMStateProvider, KVMFolder?>(
+          (state) => state.selectedFolder);
 
       return Padding(
         padding: EdgeInsets.only(left: isRoot ? 0 : 20),
@@ -64,7 +65,7 @@ class _KVMFolderPickerState extends State<KVMFolderPicker> {
                   : null,
               child: InkWell(
                 onTap: () {
-                  context.read<KVMState>().setSelectedFolder(folder);
+                  context.read<KVMStateProvider>().setSelectedFolder(folder);
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(4),
@@ -74,7 +75,9 @@ class _KVMFolderPickerState extends State<KVMFolderPicker> {
                           value: folder,
                           groupValue: selectedFolder,
                           onChanged: (value) {
-                            context.read<KVMState>().setSelectedFolder(folder);
+                            context
+                                .read<KVMStateProvider>()
+                                .setSelectedFolder(folder);
                           }),
                       Text(folder.toString()),
                     ],
@@ -95,7 +98,7 @@ class _KVMFolderPickerState extends State<KVMFolderPicker> {
     try {
       return await KVMApi.getFolders(
         widget.tenantId,
-        authToken: context.read<KVMState>().authToken,
+        authToken: context.read<KVMStateProvider>().authToken,
       );
     } on KVMApiError catch (error) {
       setState(() {
@@ -105,7 +108,7 @@ class _KVMFolderPickerState extends State<KVMFolderPicker> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error.message)));
     } on KVMAuthError catch (error) {
-      context.read<KVMState>().setAuthToken(null);
+      context.read<KVMStateProvider>().setAuthToken(null);
       Navigator.pop(context);
 
       ScaffoldMessenger.of(context)

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_hbb/kvm/kvm_routing_utils.dart';
-import 'package:flutter_hbb/kvm/domain/kvm_state.dart';
+import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
 import 'package:flutter_hbb/kvm/data/kvm_api.dart';
@@ -26,7 +26,7 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
   @override
   void initState() {
     SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
-      context.read<KVMState>().setSelectedFolder(null);
+      context.read<KVMStateProvider>().setSelectedFolder(null);
     });
     super.initState();
   }
@@ -101,7 +101,9 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
                               .toList(),
                           onChanged: (value) {
                             setState(() {
-                              context.read<KVMState>().setSelectedFolder(null);
+                              context
+                                  .read<KVMStateProvider>()
+                                  .setSelectedFolder(null);
                               selectedTenant = snapshot.data!
                                   .toList()
                                   .firstWhereOrNull(
@@ -119,7 +121,7 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
                       Spacer(),
                     Builder(builder: (context) {
                       final selectedFolder =
-                          context.select<KVMState, KVMFolder?>(
+                          context.select<KVMStateProvider, KVMFolder?>(
                               (state) => state.selectedFolder);
                       return Padding(
                         padding: const EdgeInsets.all(8.0),
@@ -173,7 +175,7 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
       final registeredDeviceId = await KVMApi.registerDevice(
         folder,
         deviceName,
-        authToken: context.read<KVMState>().authToken,
+        authToken: context.read<KVMStateProvider>().authToken,
       );
 
       _registerDeviceSuccess(registeredDeviceId);
@@ -188,7 +190,7 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
   }
 
   void _registerDeviceSuccess(int registeredDeviceId) async {
-    context.read<KVMState>().setRegisteredDeviceId(registeredDeviceId);
+    context.read<KVMStateProvider>().setRegisteredDeviceId(registeredDeviceId);
     KVMRoutingUtils.goToRustDeskHomePage(context);
   }
 
@@ -232,7 +234,7 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
   Future<Iterable<KVMTenant>?> fetchTenants() async {
     try {
       return await KVMApi.getTenants(
-          authToken: context.read<KVMState>().authToken);
+          authToken: context.read<KVMStateProvider>().authToken);
     } on KVMApiError catch (error) {
       setState(() {
         fetchError = error.message;
@@ -246,7 +248,7 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
   }
 
   void _authError(KVMAuthError error) {
-    context.read<KVMState>().setAuthToken(null);
+    context.read<KVMStateProvider>().setAuthToken(null);
     KVMRoutingUtils.goToFoldersPage(context);
     displayErrorSnackbar(error.message);
   }

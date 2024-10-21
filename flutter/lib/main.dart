@@ -14,7 +14,7 @@ import 'package:flutter_hbb/desktop/screen/desktop_port_forward_screen.dart';
 import 'package:flutter_hbb/desktop/screen/desktop_remote_screen.dart';
 import 'package:flutter_hbb/desktop/widgets/refresh_wrapper.dart';
 import 'package:flutter_hbb/kvm/kvm_service.dart';
-import 'package:flutter_hbb/kvm/domain/kvm_state.dart';
+import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
 import 'package:flutter_hbb/kvm/presentation/pages/kvm_login_page.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
@@ -367,14 +367,14 @@ class App extends StatefulWidget {
 
 class _AppState extends State<App> {
   
-  late KVMState kvmState;
+  late KVMStateProvider kvmState;
 
   @override
   void initState() {
     super.initState();
 
     // ## KVM integration
-    kvmState = KVMState();
+    kvmState = KVMStateProvider();
     KVMService().start(kvmState);
 
     WidgetsBinding.instance.window.onPlatformBrightnessChanged = () {

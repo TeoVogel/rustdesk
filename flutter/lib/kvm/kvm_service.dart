@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/kvm/data/kvm_api.dart';
-import 'package:flutter_hbb/kvm/domain/kvm_state.dart';
+import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:get/get.dart';
 
@@ -25,9 +25,9 @@ class KVMService {
   final int heartBeatIntervalInSeconds = 60;
   final int credentialsControlInSeconds = 5;
 
-  late KVMState kvmState;
+  late KVMStateProvider kvmState;
 
-  void start(KVMState kvmState) async {
+  void start(KVMStateProvider kvmState) async {
     this.kvmState = kvmState;
     setHeartbeatRefreshRate();
 

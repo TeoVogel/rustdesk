@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_hbb/kvm/kvm_routing_utils.dart';
-import 'package:flutter_hbb/kvm/domain/kvm_state.dart';
+import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
 import 'package:flutter_hbb/kvm/data/kvm_api.dart';
 import 'package:provider/provider.dart';
 
@@ -26,7 +26,7 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
   @override
   void initState() {
     SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
-      if (context.read<KVMState>().authToken != null) {
+      if (context.read<KVMStateProvider>().authToken != null) {
         _loginSuccess(false);
       }
     });
@@ -182,7 +182,7 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
         isLogingIn = true;
       });
       final authToken = await KVMApi.login(username, password);
-      context.read<KVMState>().setAuthToken(authToken);
+      context.read<KVMStateProvider>().setAuthToken(authToken);
       _loginSuccess(true);
     } on KVMApiError catch (error) {
       setState(() {

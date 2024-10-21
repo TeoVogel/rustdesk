@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
 
-class KVMState with ChangeNotifier {
+class KVMStateProvider with ChangeNotifier {
   String? authToken;
   KVMFolder? selectedFolder;
   int? registeredDeviceId;
