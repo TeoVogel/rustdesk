@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/kvm/kvm_state.dart';
-import 'package:flutter_hbb/kvm/pages/kvm_login_page.dart';
+import 'package:flutter_hbb/kvm/domain/kvm_state.dart';
+import 'package:flutter_hbb/kvm/presentation/pages/kvm_login_page.dart';
 import 'package:provider/provider.dart';
 import 'package:settings_ui/settings_ui.dart';
 

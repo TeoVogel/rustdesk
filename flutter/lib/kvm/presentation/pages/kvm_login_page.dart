@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_hbb/kvm/kvm_routing_utils.dart';
-import 'package:flutter_hbb/kvm/kvm_state.dart';
-import 'package:flutter_hbb/kvm/kvm_api.dart';
+import 'package:flutter_hbb/kvm/domain/kvm_state.dart';
+import 'package:flutter_hbb/kvm/data/kvm_api.dart';
 import 'package:provider/provider.dart';
 
 class KVMLoginPage extends StatefulWidget {

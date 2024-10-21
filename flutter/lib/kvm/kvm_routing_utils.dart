@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/kvm/pages/kvm_folders_page.dart';
-import 'package:flutter_hbb/kvm/pages/kvm_login_page.dart';
+import 'package:flutter_hbb/kvm/presentation/pages/kvm_folders_page.dart';
+import 'package:flutter_hbb/kvm/presentation/pages/kvm_login_page.dart';
 import 'package:flutter_hbb/mobile/pages/home_page.dart';
 
 abstract class KVMRoutingUtils {

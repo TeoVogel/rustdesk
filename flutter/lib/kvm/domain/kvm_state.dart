@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/kvm/models/kvm_folder.dart';
+import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
 
 class KVMState with ChangeNotifier {
   String? authToken;

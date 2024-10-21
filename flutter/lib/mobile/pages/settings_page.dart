@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common/widgets/setting_widgets.dart';
-import 'package:flutter_hbb/kvm/widgets/kvm_settings_section.dart';
+import 'package:flutter_hbb/kvm/presentation/widgets/kvm_settings_section.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:settings_ui/settings_ui.dart';

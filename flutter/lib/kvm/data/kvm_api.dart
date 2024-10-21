@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/kvm/constants.dart';
-import 'package:flutter_hbb/kvm/models/kvm_folder.dart';
-import 'package:flutter_hbb/kvm/models/kvm_tenant.dart';
+import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
+import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
 import 'package:http/http.dart' as http;
 
 abstract class KVMApi {
