@@ -789,7 +789,7 @@ void androidChannelInit() {
           }
         case "send_kvm_heartbeat":
           {
-            KVMService().sendHeartBeat();
+            KVMService().checkCredentialsAndSendHeartBeat();
             break;
           }
       }
