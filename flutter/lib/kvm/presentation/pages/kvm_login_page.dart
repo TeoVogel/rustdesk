@@ -26,9 +26,13 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
   @override
   void initState() {
     SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
-      if (context.read<KVMStateProvider>().authToken != null) {
-        _loginSuccess(false);
-      }
+      final kvmStateProvider = context.read<KVMStateProvider>();
+      kvmStateProvider.addListener(() {
+        if (kvmStateProvider.authToken != null && context.mounted) {
+          _loginSuccess(false);
+        }
+      });
+
     });
     super.initState();
   }
@@ -182,7 +186,9 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
         isLogingIn = true;
       });
       final authToken = await KVMApi.login(username, password);
-      context.read<KVMStateProvider>().setAuthToken(authToken);
+      context
+          .read<KVMStateProvider>()
+          .onLoginSuccess(authToken, username, password);
       _loginSuccess(true);
     } on KVMApiError catch (error) {
       setState(() {
