@@ -29,6 +29,8 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
       final kvmStateProvider = context.read<KVMStateProvider>();
       kvmStateProvider.addListener(() {
         if (kvmStateProvider.authToken != null && context.mounted) {
+          // TODO this token can be expired. In this case, call the API to login.
+          // TODO if the token is valid, the next step is to retrieve the device info, like the folder it's in
           _loginSuccess(false);
         }
       });
