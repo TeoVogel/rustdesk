@@ -26,7 +26,9 @@ class KVMStateProvider with ChangeNotifier {
     _setAuthToken(authToken);
   }
 
-  void onUserSessionExpired() {}
+  void onUserSessionExpired() {
+    _setAuthToken(null);
+  }
 
   void _setAuthToken(String? authToken) {
     if (this.authToken != authToken) {
