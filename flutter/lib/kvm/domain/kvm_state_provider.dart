@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/kvm/data/kvm_api.dart';
 import 'package:flutter_hbb/kvm/data/kvm_session_datasource.dart';
+import 'package:flutter_hbb/kvm/domain/models/kvm_device.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
 
@@ -61,6 +62,14 @@ class KVMStateProvider with ChangeNotifier {
       return Future.error("Algo salió mal");
     }
     return Future.error("Algo salió mal");
+  }
+
+  Future<KVMDevice?> login(String email, String password) async {
+    return _apiRequest(() async {
+      final (authToken, device) = await KVMApi.login(email, password, "1");
+      onLoginSuccess(authToken, email, password);
+      return device;
+    });
   }
 
   Future<Iterable<KVMTenant>> fetchTenants() async {

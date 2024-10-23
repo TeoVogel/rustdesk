@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_hbb/kvm/kvm_routing_utils.dart';
 import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
-import 'package:flutter_hbb/kvm/data/kvm_api.dart';
 import 'package:provider/provider.dart';
 
 class KVMLoginPage extends StatefulWidget {
@@ -183,20 +182,18 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
     String username = usernameController.text.trim();
     String password = passwordController.text.trim();
 
-    try {
-      setState(() {
-        isLogingIn = true;
-      });
-      final authToken = await KVMApi.login(username, password);
-      context
-          .read<KVMStateProvider>()
-          .onLoginSuccess(authToken, username, password);
-      _loginSuccess(true);
-    } on KVMApiError catch (error) {
-      setState(() {
-        signInError = error.message;
-      });
-    }
+    setState(() {
+      isLogingIn = true;
+    });
+
+    await context.read<KVMStateProvider>().login(username, password).then(
+      (device) {
+        _loginSuccess(device != null);
+      },
+    ).catchError((error) {
+      displayErrorSnackbar(error.toString(), context);
+    });
+
     setState(() {
       isLogingIn = false;
     });
@@ -240,5 +237,10 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
               );
             }) ??
         false;
+  }
+
+  void displayErrorSnackbar(String message, BuildContext context) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }

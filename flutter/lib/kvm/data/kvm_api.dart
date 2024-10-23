@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/kvm/constants.dart';
+import 'package:flutter_hbb/kvm/domain/models/kvm_device.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
 import 'package:http/http.dart' as http;
@@ -13,8 +14,9 @@ abstract class KVMApi {
     return {'Authorization': 'Bearer $authToken'};
   }
 
-  static Future<String> login(String username, String password) async {
-    final endpoint = "auth/token";
+  static Future<(String, KVMDevice?)> login(
+      String username, String password, String serialNO) async {
+    final endpoint = "auth/token?serialno=$serialNO";
     try {
       Map<String, String> headers = {};
       headers['Content-Type'] = "application/x-www-form-urlencoded";
@@ -26,7 +28,12 @@ abstract class KVMApi {
 
       Map<String, dynamic> json = jsonDecode(response.body);
       if (response.statusCode == 200 && json.containsKey('access_token')) {
-        return json['access_token'];
+        final device = json['device'];
+        final accessToken = json['access_token'];
+        return (
+          accessToken as String,
+          device != null ? KVMDevice.fromJson(device) : null
+        );
       } else {
         throw KVMApiError();
       }
