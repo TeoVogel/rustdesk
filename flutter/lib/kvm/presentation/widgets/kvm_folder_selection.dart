@@ -108,7 +108,7 @@ class _KVMFolderPickerState extends State<KVMFolderPicker> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error.message)));
     } on KVMAuthError catch (error) {
-      context.read<KVMStateProvider>().setAuthToken(null);
+      context.read<KVMStateProvider>().onUserSessionExpired();
       Navigator.pop(context);
 
       ScaffoldMessenger.of(context)

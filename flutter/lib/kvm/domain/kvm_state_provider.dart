@@ -7,7 +7,7 @@ class KVMStateProvider with ChangeNotifier {
   KVMStateProvider() {
     kvmSessionDatasource.getAuthToken().then((value) {
       if (value != null) {
-        setAuthToken(value);
+        _setAuthToken(value);
       }
     });
   }
@@ -23,10 +23,12 @@ class KVMStateProvider with ChangeNotifier {
   void onLoginSuccess(String authToken, String email, String password) {
     kvmSessionDatasource.storeLoginEmail(email);
     kvmSessionDatasource.storeLoginPassword(password);
-    setAuthToken(authToken);
+    _setAuthToken(authToken);
   }
 
-  void setAuthToken(String? authToken) {
+  void onUserSessionExpired() {}
+
+  void _setAuthToken(String? authToken) {
     if (this.authToken != authToken) {
       this.authToken = authToken;
       kvmSessionDatasource.storeAuthToken(authToken);
