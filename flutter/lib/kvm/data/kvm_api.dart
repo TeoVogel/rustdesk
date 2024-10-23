@@ -57,6 +57,8 @@ abstract class KVMApi {
       } else {
         throw KVMApiError();
       }
+    } on KVMAuthError catch (_) {
+      rethrow;
     } catch (err) {
       debugPrint(err.toString());
       throw KVMApiError();
@@ -85,6 +87,8 @@ abstract class KVMApi {
       } else {
         throw KVMApiError();
       }
+    } on KVMAuthError catch (_) {
+      rethrow;
     } catch (err) {
       debugPrint(err.toString());
       throw KVMApiError();
@@ -124,6 +128,8 @@ abstract class KVMApi {
       } else {
         throw KVMApiError();
       }
+    } on KVMAuthError catch (_) {
+      rethrow;
     } catch (err) {
       debugPrint(err.toString());
       throw KVMApiError();
@@ -159,6 +165,8 @@ abstract class KVMApi {
       } else {
         throw KVMApiError();
       }
+    } on KVMAuthError catch (_) {
+      rethrow;
     } catch (err) {
       debugPrint(err.toString());
       throw KVMApiError();

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hbb/kvm/data/kvm_api.dart';
 import 'package:flutter_hbb/kvm/data/kvm_session_datasource.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
+import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
 
 class KVMStateProvider with ChangeNotifier {
 
@@ -48,5 +50,36 @@ class KVMStateProvider with ChangeNotifier {
   void setRegisteredDeviceId(int? registeredDeviceId) {
     this.registeredDeviceId = registeredDeviceId;
     notifyListeners();
+  }
+
+  Future<T> _apiRequest<T>(Future<T> Function() request) async {
+    try {
+      return await request();
+    } on KVMAuthError catch (e) {
+      onUserSessionExpired();
+    } on KVMApiError catch (e) {
+      return Future.error("Algo salió mal");
+    }
+    return Future.error("Algo salió mal");
+  }
+
+  Future<Iterable<KVMTenant>> fetchTenants() async {
+    return _apiRequest(() {
+      return KVMApi.getTenants(authToken: authToken);
+    });
+  }
+
+  Future<int> registerDevice(KVMFolder folder, String deviceName) async {
+    final trimmedDeviceName = deviceName.trim();
+    if (trimmedDeviceName.isEmpty) {
+      return Future.error("El nombre no puede ser vacío");
+    }
+    return _apiRequest(() {
+      return KVMApi.registerDevice(
+        folder,
+        trimmedDeviceName,
+        authToken: authToken,
+      );
+    });
   }
 }

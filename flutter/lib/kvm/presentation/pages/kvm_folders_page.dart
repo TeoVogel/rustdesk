@@ -4,7 +4,6 @@ import 'package:flutter_hbb/kvm/kvm_routing_utils.dart';
 import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
-import 'package:flutter_hbb/kvm/data/kvm_api.dart';
 import 'package:flutter_hbb/kvm/presentation/widgets/kvm_folder_selection.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
@@ -17,7 +16,6 @@ class KVMFoldersPage extends StatefulWidget {
 }
 
 class _KVMFoldersPageState extends State<KVMFoldersPage> {
-  String? fetchError;
 
   KVMTenant? selectedTenant;
 
@@ -56,7 +54,7 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
             ),
             SliverFillRemaining(
               child: FutureBuilder(
-                future: fetchTenants(context),
+                future: context.read<KVMStateProvider>().fetchTenants(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
                     return Center(
@@ -64,9 +62,9 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
                     );
                   }
 
-                  if (fetchError != null) {
+                  if (snapshot.hasError) {
                     return Center(
-                      child: Text(fetchError!),
+                      child: Text(snapshot.error.toString()),
                     );
                   }
 
@@ -169,27 +167,20 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
     if (deviceName == null) {
       return;
     }
-    if (deviceName.isEmpty) {
-      displayErrorSnackbar("Device name can't be empty", context);
-      return;
-    }
 
-    try {
-      setState(() {
-        isRegisteringDevice = true;
-      });
-      final registeredDeviceId = await KVMApi.registerDevice(
-        folder,
-        deviceName,
-        authToken: context.read<KVMStateProvider>().authToken,
-      );
+    setState(() {
+      isRegisteringDevice = true;
+    });
 
+    await context
+        .read<KVMStateProvider>()
+        .registerDevice(folder, deviceName)
+        .then((registeredDeviceId) {
       _registerDeviceSuccess(registeredDeviceId);
-    } on KVMApiError catch (error) {
-      displayErrorSnackbar(error.message, context);
-    } on KVMAuthError catch (error) {
-      _authError(error, context);
-    }
+    }).catchError((error) {
+      displayErrorSnackbar(error.toString(), context);
+    });
+
     setState(() {
       isRegisteringDevice = false;
     });
@@ -216,9 +207,7 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
           actions: [
             TextButton(
               onPressed: () {
-                var sanitizedDeviceName =
-                    getSanitizedDeviceName(controller.text);
-                Navigator.pop(context, sanitizedDeviceName);
+                Navigator.pop(context, controller.text);
               },
               child: Text("Continue"),
             )
@@ -226,37 +215,6 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
         );
       },
     );
-  }
-
-  String? getSanitizedDeviceName(String? input) {
-    if (input == null) {
-      return null;
-    }
-
-    final trimmedInput = input.trim();
-    return trimmedInput;
-  }
-
-  Future<Iterable<KVMTenant>?> fetchTenants(BuildContext context) async {
-    try {
-      return await KVMApi.getTenants(
-          authToken: context.read<KVMStateProvider>().authToken);
-    } on KVMApiError catch (error) {
-      setState(() {
-        fetchError = error.message;
-      });
-
-      displayErrorSnackbar(error.message, context);
-    } on KVMAuthError catch (error) {
-      _authError(error, context);
-    }
-    return [];
-  }
-
-  void _authError(KVMAuthError error, BuildContext context) {
-    context.read<KVMStateProvider>().setAuthToken(null);
-    KVMRoutingUtils.goToFoldersPage(context);
-    displayErrorSnackbar(error.message, context);
   }
 
   void displayErrorSnackbar(String message, BuildContext context) {
