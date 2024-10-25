@@ -23,8 +23,15 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
 
   @override
   void initState() {
-    SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
+    SchedulerBinding.instance.addPostFrameCallback((timeStamp) async {
       widget.stepRegisterDevice.setSelectedFolder(null);
+      final stateProvider = context.read<KVMStateProvider>();
+      final device = stateProvider.device;
+      if (device != null) {
+        if (!(await showReEnrollDeviceDialog()) && context.mounted) {
+          stateProvider.onDeviceRegistered(device);
+        }
+      }
     });
     
     super.initState();
@@ -175,6 +182,34 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
     setState(() {
       isRegisteringDevice = false;
     });
+  }
+
+  Future<bool> showReEnrollDeviceDialog() async {
+    return await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) {
+              return AlertDialog(
+                title: Text("El dispositivo ya está registrado"),
+                content: Text(
+                    "Deseas registrar el dispositivo en una nueva carpeta o usar la existente?"),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(false);
+                    },
+                    child: Text("Usar carpeta existente"),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(true);
+                    },
+                    child: Text("Nueva carpeta"),
+                  ),
+                ],
+              );
+            }) ??
+        false;
   }
 
   Future<String?> showDialogNamePicker() {

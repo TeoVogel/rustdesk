@@ -85,6 +85,7 @@ class KVMStateProvider with ChangeNotifier {
         password,
         await KVMUtils.getSerialNO(),
       );
+      this.device = device;
       onLoginSuccess(authToken, email, password);
       return device;
     });

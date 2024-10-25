@@ -168,57 +168,16 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
       isLogingIn = true;
     });
 
-    await context.read<KVMStateProvider>().login(username, password).then(
-      (device) {
-        _loginSuccess(device != null);
-      },
-    ).catchError((error) {
+    await context
+        .read<KVMStateProvider>()
+        .login(username, password)
+        .catchError((error) {
       displayErrorSnackbar(error.toString(), context);
     });
 
     setState(() {
       isLogingIn = false;
     });
-  }
-
-  void _loginSuccess(bool deviceAlreadyEnrolled) async {
-    /*if (deviceAlreadyEnrolled) {
-      if (await showReEnrollDeviceDialog()) {
-        KVMRoutingUtils.goToFoldersPage(context);
-      } else {
-        KVMRoutingUtils.goToPermissionsPage(context);
-      }
-    } else {
-      KVMRoutingUtils.goToFoldersPage(context);
-    }*/
-  }
-
-  Future<bool> showReEnrollDeviceDialog() async {
-    return await showDialog<bool>(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) {
-              return AlertDialog(
-                title: Text("El dispositivo ya está registrado"),
-                content: Text(
-                    "Deseas registrar el dispositivo en una nueva carpeta o usar la existente?"),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop(false);
-                    },
-                    child: Text("Usar carpeta existente"),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop(true);
-                    },
-                    child: Text("Nueva carpeta"),
-                  ),
-                ],
-              );
-            }) ??
-        false;
   }
 
   void displayErrorSnackbar(String message, BuildContext context) {
