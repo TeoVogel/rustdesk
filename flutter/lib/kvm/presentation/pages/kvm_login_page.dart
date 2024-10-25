@@ -204,7 +204,7 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
       if (await showReEnrollDeviceDialog()) {
         KVMRoutingUtils.goToFoldersPage(context);
       } else {
-        KVMRoutingUtils.goToRustDeskHomePage(context);
+        KVMRoutingUtils.goToPermissionsPage(context);
       }
     } else {
       KVMRoutingUtils.goToFoldersPage(context);

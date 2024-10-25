@@ -4,6 +4,7 @@ import 'package:flutter_hbb/kvm/kvm_routing_utils.dart';
 import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
+import 'package:flutter_hbb/kvm/presentation/widgets/kvm_app_bar.dart';
 import 'package:flutter_hbb/kvm/presentation/widgets/kvm_folder_selection.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
@@ -35,23 +36,7 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
       body: Builder(builder: (context) {
         return CustomScrollView(
           slivers: [
-            SliverAppBar.large(
-              flexibleSpace: Padding(
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).padding.top + kToolbarHeight,
-                  bottom: 16,
-                ),
-                child: Center(
-                    child: Image.asset(
-                  "assets/dex_logo.png",
-                  scale: 1,
-                )),
-              ),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(24),
-                      bottomRight: Radius.circular(24))),
-            ),
+            getKVMSliverAppBar(context),
             SliverFillRemaining(
               child: FutureBuilder(
                 future: context.read<KVMStateProvider>().fetchTenants(),
@@ -128,6 +113,8 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
                         return Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                padding: EdgeInsets.all(12)),
                             onPressed: selectedFolder != null &&
                                     !isRegisteringDevice
                                 ? () {
@@ -188,7 +175,7 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
 
   void _registerDeviceSuccess(int registeredDeviceId) async {
     context.read<KVMStateProvider>().setRegisteredDeviceId(registeredDeviceId);
-    KVMRoutingUtils.goToRustDeskHomePage(context);
+    KVMRoutingUtils.goToPermissionsPage(context);
   }
 
   Future<String?> showDialogNamePicker() {
