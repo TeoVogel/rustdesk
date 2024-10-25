@@ -6,6 +6,7 @@ import 'package:flutter_hbb/kvm/data/kvm_session_datasource.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_device.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
+import 'package:flutter_hbb/kvm/kvm_utils.dart';
 import 'package:flutter_hbb/kvm/presentation/kvm_state.dart';
 
 class KVMStateProvider with ChangeNotifier {
@@ -79,7 +80,11 @@ class KVMStateProvider with ChangeNotifier {
 
   Future<KVMDevice?> login(String email, String password) async {
     return _apiRequest(() async {
-      final (authToken, device) = await KVMApi.login(email, password, "1");
+      final (authToken, device) = await KVMApi.login(
+        email,
+        password,
+        await KVMUtils.getSerialNO(),
+      );
       onLoginSuccess(authToken, email, password);
       return device;
     });
@@ -100,6 +105,7 @@ class KVMStateProvider with ChangeNotifier {
       final device = await KVMApi.registerDevice(
         folder,
         trimmedDeviceName,
+        await KVMUtils.getSerialNO(),
         authToken: authToken,
       );
       onDeviceRegistered(device);

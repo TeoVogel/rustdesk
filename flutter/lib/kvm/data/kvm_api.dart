@@ -102,8 +102,12 @@ abstract class KVMApi {
     }
   }
 
-  static Future<KVMDevice> registerDevice(KVMFolder folder, String deviceName,
-      {String? authToken}) async {
+  static Future<KVMDevice> registerDevice(
+    KVMFolder folder,
+    String deviceName,
+    String serialNO, {
+    String? authToken,
+  }) async {
     final endpoint = "devices/";
     try {
       var headers = getKVMHttpHeaders(authToken);
@@ -118,7 +122,7 @@ abstract class KVMApi {
               "id_rust": "",
               "pass_rust": "",
               "last_screenshot_path": "",
-              "serialno": "1",
+              "serialno": serialNO,
               "folder_id": folder.id,
               "os_name": "",
               "os_version": "",
