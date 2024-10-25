@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hbb/kvm/data/kvm_api.dart';
 import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
+import 'package:flutter_hbb/kvm/presentation/kvm_state.dart';
 import 'package:provider/provider.dart';
 
 class KVMFolderPicker extends StatefulWidget {
-  const KVMFolderPicker({super.key, required this.tenantId});
+  const KVMFolderPicker({super.key, required this.stepRegisterDevice});
 
-  final int tenantId;
+  final KVMStepRegisterDevice stepRegisterDevice;
 
   @override
   State<KVMFolderPicker> createState() => _KVMFolderPickerState();
@@ -49,10 +50,10 @@ class _KVMFolderPickerState extends State<KVMFolderPicker> {
   }
 
   Widget getFolderWidget(KVMFolder folder, {isRoot = false}) {
-    return Builder(builder: (context) {
-      final selectedFolder =
-          context.select<KVMStateProvider, KVMFolder?>(
-          (state) => state.selectedFolder);
+    return ListenableBuilder(
+        listenable: widget.stepRegisterDevice,
+        builder: (context, _) {
+          final selectedFolder = widget.stepRegisterDevice.selectedFolder;
 
       return Padding(
         padding: EdgeInsets.only(left: isRoot ? 0 : 20),
@@ -65,7 +66,7 @@ class _KVMFolderPickerState extends State<KVMFolderPicker> {
                   : null,
               child: InkWell(
                 onTap: () {
-                  context.read<KVMStateProvider>().setSelectedFolder(folder);
+                      widget.stepRegisterDevice.setSelectedFolder(folder);
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(4),
@@ -75,9 +76,8 @@ class _KVMFolderPickerState extends State<KVMFolderPicker> {
                           value: folder,
                           groupValue: selectedFolder,
                           onChanged: (value) {
-                            context
-                                .read<KVMStateProvider>()
-                                .setSelectedFolder(folder);
+                                widget.stepRegisterDevice
+                                    .setSelectedFolder(folder);
                           }),
                       Text(folder.toString()),
                     ],
@@ -95,9 +95,13 @@ class _KVMFolderPickerState extends State<KVMFolderPicker> {
   }
 
   Future<Iterable<KVMFolder>?> fetchFolders() async {
+    final tenantId = widget.stepRegisterDevice.selectedTenant?.id;
+    if (tenantId == null) {
+      return [];
+    }
     try {
       return await KVMApi.getFolders(
-        widget.tenantId,
+        tenantId,
         authToken: context.read<KVMStateProvider>().authToken,
       );
     } on KVMApiError catch (error) {

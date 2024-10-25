@@ -15,7 +15,7 @@ import 'package:flutter_hbb/desktop/screen/desktop_remote_screen.dart';
 import 'package:flutter_hbb/desktop/widgets/refresh_wrapper.dart';
 import 'package:flutter_hbb/kvm/kvm_service.dart';
 import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
-import 'package:flutter_hbb/kvm/presentation/pages/kvm_login_page.dart';
+import 'package:flutter_hbb/kvm/presentation/kvm_onboarding_screen.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -426,9 +426,7 @@ class _AppState extends State<App> {
               ? const DesktopTabPage()
               : isWeb
                   ? WebHomePage()
-                  : !kvmState.isKVMSetedup
-                      ? KVMLoginPage()
-                      : HomePage(),
+                  : KVMOnboardingScreen(),
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,

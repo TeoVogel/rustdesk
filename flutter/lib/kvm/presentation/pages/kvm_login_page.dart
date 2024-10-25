@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
-import 'package:flutter_hbb/kvm/kvm_routing_utils.dart';
 import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -21,22 +19,6 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
   bool isLogingIn = false;
 
   var passwordVisible = false;
-
-  @override
-  void initState() {
-    SchedulerBinding.instance.addPostFrameCallback((timeStamp) {
-      final kvmStateProvider = context.read<KVMStateProvider>();
-      kvmStateProvider.addListener(() {
-        if (kvmStateProvider.authToken != null && context.mounted) {
-          // TODO this token can be expired. In this case, call the API to login.
-          // TODO if the token is valid, the next step is to retrieve the device info, like the folder it's in
-          _loginSuccess(false);
-        }
-      });
-
-    });
-    super.initState();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -200,7 +182,7 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
   }
 
   void _loginSuccess(bool deviceAlreadyEnrolled) async {
-    if (deviceAlreadyEnrolled) {
+    /*if (deviceAlreadyEnrolled) {
       if (await showReEnrollDeviceDialog()) {
         KVMRoutingUtils.goToFoldersPage(context);
       } else {
@@ -208,7 +190,7 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
       }
     } else {
       KVMRoutingUtils.goToFoldersPage(context);
-    }
+    }*/
   }
 
   Future<bool> showReEnrollDeviceDialog() async {

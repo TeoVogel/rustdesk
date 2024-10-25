@@ -11,7 +11,6 @@ SliverAppBar getKVMSliverAppBar(BuildContext context) => SliverAppBar.large(
           onPressed: () {
             gFFI.serverModel.stopService();
             context.read<KVMStateProvider>().onUserSessionExpired();
-            KVMRoutingUtils.goToLoginPage(context);
           },
           icon: Icon(Icons.restart_alt_rounded),
         ),

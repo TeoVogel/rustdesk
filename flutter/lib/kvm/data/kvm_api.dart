@@ -102,7 +102,7 @@ abstract class KVMApi {
     }
   }
 
-  static Future<int> registerDevice(KVMFolder folder, String deviceName,
+  static Future<KVMDevice> registerDevice(KVMFolder folder, String deviceName,
       {String? authToken}) async {
     final endpoint = "devices/";
     try {
@@ -118,6 +118,7 @@ abstract class KVMApi {
               "id_rust": "",
               "pass_rust": "",
               "last_screenshot_path": "",
+              "serialno": "1",
               "folder_id": folder.id,
               "os_name": "",
               "os_version": "",
@@ -131,7 +132,7 @@ abstract class KVMApi {
 
       Map<String, dynamic> json = jsonDecode(response.body);
       if (response.statusCode == 200 && json.containsKey('id')) {
-        return json['id'];
+        return KVMDevice.fromJson(json);
       } else {
         throw KVMApiError();
       }
