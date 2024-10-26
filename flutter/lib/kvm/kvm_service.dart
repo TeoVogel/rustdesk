@@ -4,6 +4,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/consts.dart';
+import 'package:flutter_hbb/kvm/constants.dart';
 import 'package:flutter_hbb/kvm/data/kvm_api.dart';
 import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
@@ -21,9 +22,6 @@ class KVMService {
   String? lastKnownRustId;
   String? lastKnownRustPass;
   DateTime lastHeartBeatTimestamp = DateTime.now();
-
-  final int heartBeatIntervalInSeconds = 60;
-  final int credentialsControlInSeconds = 5;
 
   late KVMStateProvider kvmState;
 

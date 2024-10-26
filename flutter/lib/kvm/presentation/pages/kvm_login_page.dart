@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hbb/kvm/constants.dart';
 import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -19,6 +20,13 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
   bool isLogingIn = false;
 
   var passwordVisible = false;
+
+  @override
+  void initState() {
+    usernameController.text = prefilledEmail ?? "";
+    passwordController.text = prefilledPass ?? "";
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
