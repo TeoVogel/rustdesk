@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
 import 'package:flutter_hbb/kvm/presentation/widgets/kvm_app_bar.dart';
 import 'package:flutter_hbb/mobile/pages/server_page.dart';
 import 'package:flutter_hbb/models/server_model.dart';
@@ -46,6 +47,9 @@ class _KVMPermissionsPageState extends State<KVMPermissionsPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        Text(
+                          "Device: ${context.read<KVMStateProvider>().device?.name}",
+                        ),
                         Card(
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(13),
