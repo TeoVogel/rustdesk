@@ -35,11 +35,11 @@ abstract class KVMApi {
           device != null ? KVMDevice.fromJson(device) : null
         );
       } else {
-        throw KVMApiError();
+        throw KVMApiError(error: "${response.statusCode}: ${response.body}");
       }
     } catch (err) {
       debugPrint(err.toString());
-      throw KVMApiError();
+      rethrow;
     }
   }
 
@@ -57,11 +57,11 @@ abstract class KVMApi {
       if (response.statusCode == 200 && json.containsKey('access_token')) {
         return KVMSession.fromJson(json);
       } else {
-        throw KVMApiError();
+        throw KVMApiError(error: "${response.statusCode}: ${response.body}");
       }
     } catch (err) {
       debugPrint(err.toString());
-      throw KVMApiError();
+      rethrow;
     }
   }
 
@@ -84,13 +84,13 @@ abstract class KVMApi {
         return (json["items"] as Iterable<dynamic>)
             .map((e) => KVMTenant.fromJson(e));
       } else {
-        throw KVMApiError();
+        throw KVMApiError(error: "${response.statusCode}: ${response.body}");
       }
     } on KVMAuthError catch (_) {
       rethrow;
     } catch (err) {
       debugPrint(err.toString());
-      throw KVMApiError();
+      rethrow;
     }
   }
 
@@ -114,13 +114,13 @@ abstract class KVMApi {
         return (json["items"] as Iterable<dynamic>)
             .map((e) => KVMFolder.fromJson(e));
       } else {
-        throw KVMApiError();
+        throw KVMApiError(error: "${response.statusCode}: ${response.body}");
       }
     } on KVMAuthError catch (_) {
       rethrow;
     } catch (err) {
       debugPrint(err.toString());
-      throw KVMApiError();
+      rethrow;
     }
   }
 
@@ -160,13 +160,44 @@ abstract class KVMApi {
       if (response.statusCode == 200 && json.containsKey('id')) {
         return KVMDevice.fromJson(json);
       } else {
-        throw KVMApiError();
+        throw KVMApiError(error: "${response.statusCode}: ${response.body}");
       }
     } on KVMAuthError catch (_) {
       rethrow;
     } catch (err) {
       debugPrint(err.toString());
-      throw KVMApiError();
+      rethrow;
+    }
+  }
+
+  static Future<KVMDevice?> getDevice(
+    int? deviceId, {
+    String? authToken,
+  }) async {
+    if (deviceId == null) {
+      return null;
+    }
+
+    final endpoint = "devices/$deviceId";
+    try {
+      var headers = getKVMHttpHeaders(authToken);
+      headers['Content-Type'] = "application/json";
+      final response = await http.get(
+        Uri.parse(getKVMApiUrl(endpoint)),
+        headers: headers,
+      );
+
+      Map<String, dynamic> json = jsonDecode(response.body);
+      if (response.statusCode == 200 && json.containsKey('id')) {
+        return KVMDevice.fromJson(json);
+      } else {
+        throw KVMApiError(error: "${response.statusCode}: ${response.body}");
+      }
+    } on KVMAuthError catch (_) {
+      rethrow;
+    } catch (err) {
+      debugPrint(err.toString());
+      rethrow;
     }
   }
 
@@ -197,13 +228,13 @@ abstract class KVMApi {
       if (response.statusCode == 200 && json.containsKey('timestamp')) {
         return json['timestamp'];
       } else {
-        throw KVMApiError();
+        throw KVMApiError(error: "${response.statusCode}: ${response.body}");
       }
     } on KVMAuthError catch (_) {
       rethrow;
     } catch (err) {
       debugPrint(err.toString());
-      throw KVMApiError();
+      rethrow;
     }
   }
 }
@@ -212,10 +243,20 @@ class KVMApiError implements Exception {
   final String message;
 
   KVMApiError({String? error}) : message = error ?? "Something went wrong";
+
+  @override
+  String toString() {
+    return message;
+  }
 }
 
 class KVMAuthError implements Exception {
   final String message;
 
   KVMAuthError({String? error}) : message = error ?? "Session expired";
+
+  @override
+  String toString() {
+    return message;
+  }
 }

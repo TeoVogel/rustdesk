@@ -4,8 +4,11 @@ class KVMSessionDatasource {
   final _storage = FlutterSecureStorage();
 
   final refreshTokenStorageKey = "refreshTokenStorageKey";
+
   final loginEmailStorageKey = "loginEmailStorageKey";
   final loginPasswordStorageKey = "loginPasswordStorageKey";
+
+  final deviceIdStorageKey = "deviceIdStorageKey";
 
   Future<String?> getRefreshToken() => _get(refreshTokenStorageKey);
   void storeRefreshToken(String? token) {
@@ -20,6 +23,15 @@ class KVMSessionDatasource {
   Future<String?> getLoginPassword() => _get(loginPasswordStorageKey);
   void storeLoginPassword(String? password) {
     _store(loginPasswordStorageKey, password);
+  }
+
+  Future<int?> getDeviceId() async {
+    final deviceIdString = await _get(deviceIdStorageKey);
+    return deviceIdString != null ? int.parse(deviceIdString) : null;
+  }
+
+  void storeDeviceId(int? deviceId) {
+    _store(deviceIdStorageKey, deviceId?.toString());
   }
 
   void _store(String key, String? value) {

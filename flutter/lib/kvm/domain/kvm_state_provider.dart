@@ -19,7 +19,11 @@ class KVMStateProvider with ChangeNotifier {
           KVMSession session = await _apiRequest(() {
             return KVMApi.refreshTokens(refreshToken);
           });
-          onSessionRestored(session);
+          int? deviceId = await kvmSessionDatasource.getDeviceId();
+          KVMDevice? device = await _apiRequest(() {
+            return KVMApi.getDevice(deviceId, authToken: session.authToken);
+          });
+          onSessionRestored(session, device);
         } on Exception catch (e) {
           onUserSessionExpired();
         }
@@ -46,20 +50,29 @@ class KVMStateProvider with ChangeNotifier {
 
   void onUserSessionExpired() {
     _setSession(null);
+    kvmSessionDatasource.storeLoginEmail(null);
+    kvmSessionDatasource.storeLoginPassword(null);
+    kvmSessionDatasource.storeDeviceId(null);
     nextStepState = loginStepState;
     notifyListeners();
   }
 
-  void onSessionRestored(KVMSession session) {
+  void onSessionRestored(KVMSession session, KVMDevice? device) {
     _setSession(session);
-    nextStepState = registerDeviceStepState;
-    notifyListeners();
+    if (device != null) {
+      onDeviceRegistered(device);
+    } else {
+      nextStepState = registerDeviceStepState;
+      notifyListeners();
+    }
   }
 
-  void onLoginSuccess(KVMSession session, String email, String password) {
+  void onLoginSuccess(
+      KVMSession session, KVMDevice? device, String email, String password) {
     _setSession(session);
     kvmSessionDatasource.storeLoginEmail(email);
     kvmSessionDatasource.storeLoginPassword(password);
+    kvmSessionDatasource.storeDeviceId(device?.id);
     nextStepState = registerDeviceStepState;
     notifyListeners();
   }
@@ -69,14 +82,13 @@ class KVMStateProvider with ChangeNotifier {
   }
 
   void _setSession(KVMSession? session) {
-    if (this.session != session) {
-      this.session = session;
-      kvmSessionDatasource.storeRefreshToken(session?.refreshToken);
-    }
+    this.session = session;
+    kvmSessionDatasource.storeRefreshToken(session?.refreshToken);
   }
 
   void onDeviceRegistered(KVMDevice device) {
     this.device = device;
+    kvmSessionDatasource.storeDeviceId(device.id);
     nextStepState = requestPermissionsStepState;
     notifyListeners();
   }
@@ -100,7 +112,7 @@ class KVMStateProvider with ChangeNotifier {
         await KVMUtils.getSerialNO(),
       );
       this.device = device;
-      onLoginSuccess(session, email, password);
+      onLoginSuccess(session, device, email, password);
       return device;
     });
   }
