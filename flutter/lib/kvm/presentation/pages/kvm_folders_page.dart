@@ -18,7 +18,6 @@ class KVMFoldersPage extends StatefulWidget {
 }
 
 class _KVMFoldersPageState extends State<KVMFoldersPage> {
-
   bool isRegisteringDevice = false;
 
   @override
@@ -33,7 +32,7 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
         }
       }
     });
-    
+
     super.initState();
   }
 
@@ -158,8 +157,7 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
               );
             }),
           );
-        }
-    );
+        });
   }
 
   void _registerDevice(KVMFolder folder, BuildContext context) async {
@@ -172,12 +170,11 @@ class _KVMFoldersPageState extends State<KVMFoldersPage> {
       isRegisteringDevice = true;
     });
 
-    await context
-        .read<KVMStateProvider>()
-        .registerDevice(folder, deviceName)
-        .catchError((error) {
-      displayErrorSnackbar(error.toString(), context);
-    });
+    try {
+      await context.read<KVMStateProvider>().registerDevice(folder, deviceName);
+    } catch (e) {
+      displayErrorSnackbar(e.toString(), context);
+    }
 
     setState(() {
       isRegisteringDevice = false;
