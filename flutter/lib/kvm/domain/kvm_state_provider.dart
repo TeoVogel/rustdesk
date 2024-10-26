@@ -5,6 +5,7 @@ import 'package:flutter_hbb/kvm/data/kvm_api.dart';
 import 'package:flutter_hbb/kvm/data/kvm_session_datasource.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_device.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
+import 'package:flutter_hbb/kvm/domain/models/kvm_session.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
 import 'package:flutter_hbb/kvm/kvm_utils.dart';
 import 'package:flutter_hbb/kvm/presentation/kvm_state.dart';
@@ -12,10 +13,16 @@ import 'package:flutter_hbb/kvm/presentation/kvm_state.dart';
 class KVMStateProvider with ChangeNotifier {
 
   KVMStateProvider() {
-    kvmSessionDatasource.getAuthToken().then((value) {
-      if (value != null) {
-        onUserSessionExpired();
-        //onSessionRestored(value);
+    kvmSessionDatasource.getRefreshToken().then((refreshToken) async {
+      if (refreshToken != null) {
+        try {
+          KVMSession session = await _apiRequest(() {
+            return KVMApi.refreshTokens(refreshToken);
+          });
+          onSessionRestored(session);
+        } on Exception catch (e) {
+          onUserSessionExpired();
+        }
       } else {
         onUserSessionExpired();
       }
@@ -29,35 +36,42 @@ class KVMStateProvider with ChangeNotifier {
   final requestPermissionsStepState = KVMStepRequestPerissions();
   KVMStepState nextStepState = KVMStepInitializing();
 
-  String? authToken;
+  KVMSession? session;
   KVMDevice? device;
 
+  String? get authToken => session?.authToken;
   int? get registeredDeviceId => device?.id;
 
-  bool get isKVMSetedup => authToken != null && device != null;
+  bool get isKVMSetedup => session != null && device != null;
 
   void onUserSessionExpired() {
-    _setAuthToken(null);
+    _setSession(null);
     nextStepState = loginStepState;
     notifyListeners();
   }
 
-  void onSessionRestored(String authToken) {
-    _setAuthToken(authToken);
+  void onSessionRestored(KVMSession session) {
+    _setSession(session);
+    nextStepState = registerDeviceStepState;
+    notifyListeners();
   }
 
-  void onLoginSuccess(String authToken, String email, String password) {
-    _setAuthToken(authToken);
+  void onLoginSuccess(KVMSession session, String email, String password) {
+    _setSession(session);
     kvmSessionDatasource.storeLoginEmail(email);
     kvmSessionDatasource.storeLoginPassword(password);
     nextStepState = registerDeviceStepState;
     notifyListeners();
   }
 
-  void _setAuthToken(String? authToken) {
-    if (this.authToken != authToken) {
-      this.authToken = authToken;
-      kvmSessionDatasource.storeAuthToken(authToken);
+  void onRefreshToken(KVMSession session) {
+    _setSession(session);
+  }
+
+  void _setSession(KVMSession? session) {
+    if (this.session != session) {
+      this.session = session;
+      kvmSessionDatasource.storeRefreshToken(session?.refreshToken);
     }
   }
 
@@ -73,20 +87,20 @@ class KVMStateProvider with ChangeNotifier {
     } on KVMAuthError catch (e) {
       onUserSessionExpired();
     } on KVMApiError catch (e) {
-      return Future.error("Algo salió mal");
+      return Future.error(e);
     }
-    return Future.error("Algo salió mal");
+    return Future.error(Exception("Algo salió mal"));
   }
 
   Future<KVMDevice?> login(String email, String password) async {
     return _apiRequest(() async {
-      final (authToken, device) = await KVMApi.login(
+      final (session, device) = await KVMApi.login(
         email,
         password,
         await KVMUtils.getSerialNO(),
       );
       this.device = device;
-      onLoginSuccess(authToken, email, password);
+      onLoginSuccess(session, email, password);
       return device;
     });
   }

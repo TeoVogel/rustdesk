@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hbb/kvm/constants.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_device.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
+import 'package:flutter_hbb/kvm/domain/models/kvm_session.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
 import 'package:http/http.dart' as http;
 
@@ -14,7 +15,7 @@ abstract class KVMApi {
     return {'Authorization': 'Bearer $authToken'};
   }
 
-  static Future<(String, KVMDevice?)> login(
+  static Future<(KVMSession, KVMDevice?)> login(
       String username, String password, String serialNO) async {
     final endpoint = "auth/token?serialno=$serialNO";
     try {
@@ -29,11 +30,32 @@ abstract class KVMApi {
       Map<String, dynamic> json = jsonDecode(response.body);
       if (response.statusCode == 200 && json.containsKey('access_token')) {
         final device = json['device'];
-        final accessToken = json['access_token'];
         return (
-          accessToken as String,
+          KVMSession.fromJson(json),
           device != null ? KVMDevice.fromJson(device) : null
         );
+      } else {
+        throw KVMApiError();
+      }
+    } catch (err) {
+      debugPrint(err.toString());
+      throw KVMApiError();
+    }
+  }
+
+  static Future<KVMSession> refreshTokens(String refreshToken) async {
+    final endpoint = "auth/token?refresh_token=$refreshToken";
+    try {
+      Map<String, String> headers = {};
+      headers['Content-Type'] = "application/x-www-form-urlencoded";
+      final response = await http.put(
+        Uri.parse(getKVMApiUrl(endpoint)),
+        headers: headers,
+      );
+
+      Map<String, dynamic> json = jsonDecode(response.body);
+      if (response.statusCode == 200 && json.containsKey('access_token')) {
+        return KVMSession.fromJson(json);
       } else {
         throw KVMApiError();
       }
