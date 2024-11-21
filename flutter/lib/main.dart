@@ -346,17 +346,12 @@ void runInstallPage() async {
 
 WindowOptions getHiddenTitleBarWindowOptions(
     {Size? size, bool center = false}) {
-  var defaultTitleBarStyle = TitleBarStyle.hidden;
-  // we do not hide titlebar on win7 because of the frame overflow.
-  if (kUseCompatibleUiMode) {
-    defaultTitleBarStyle = TitleBarStyle.normal;
-  }
   return WindowOptions(
     size: size,
     center: center,
     backgroundColor: Colors.transparent,
-    skipTaskbar: false,
-    titleBarStyle: defaultTitleBarStyle,
+    //skipTaskbar: false,
+    titleBarStyle: TitleBarStyle.normal,
   );
 }
 
@@ -422,11 +417,7 @@ class _AppState extends State<App> {
           theme: MyTheme.lightTheme,
           darkTheme: MyTheme.darkTheme,
           themeMode: MyTheme.currentThemeMode(),
-          home: isDesktop
-              ? const DesktopTabPage()
-              : isWeb
-                  ? WebHomePage()
-                  : KVMOnboardingScreen(),
+          home: KVMOnboardingScreen(),
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
