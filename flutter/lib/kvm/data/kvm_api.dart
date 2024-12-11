@@ -1,11 +1,13 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/kvm/constants.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_device.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_session.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
+import 'package:flutter_hbb/kvm/kvm_service.dart';
 import 'package:http/http.dart' as http;
 
 abstract class KVMApi {
@@ -128,6 +130,11 @@ abstract class KVMApi {
     KVMFolder folder,
     String deviceName,
     String serialNO, {
+    String? soName,
+    String? soVersion,
+    String? timeZone,
+    String? localIps,
+    Iterable<String>? macAddress,
     String? authToken,
   }) async {
     final endpoint = "devices/";
@@ -146,8 +153,11 @@ abstract class KVMApi {
               "last_screenshot_path": "",
               "serialno": serialNO,
               "folder_id": folder.id,
-              "os_name": "",
-              "os_version": "",
+              "SO_name": soName,
+              "SO_version": soVersion,
+              "time_zone": timeZone,
+              "local_ips": localIps,
+              "MAC_adresses": macAddress,
               "os_kernel_version": "",
               "vendor_name": "",
               "vendor_model": "",
@@ -205,7 +215,8 @@ abstract class KVMApi {
     int deviceId, {
     String? rustId,
     String? rustPass,
-    String? authToken,
+    String? authToken, 
+    int? memLoadMb,
   }) async {
     final endpoint = "devices/$deviceId/heartbeat";
     try {
@@ -219,6 +230,7 @@ abstract class KVMApi {
                 {
                   "id_rust": rustId,
                   "pass_rust": rustPass,
+                  "MEM_load_mb": memLoadMb,
                 },
               )
             : jsonEncode({}),

@@ -134,6 +134,11 @@ class KVMStateProvider with ChangeNotifier {
         trimmedDeviceName,
         await KVMUtils.getSerialNO(),
         authToken: authToken,
+        soName: KVMUtils.getOSName(),
+        soVersion: await KVMUtils.getOSVersion(),
+        timeZone: DateTime.now().timeZoneName,
+        localIps: await KVMUtils.getIPs(),
+        macAddress: await KVMUtils.getMACs(), //does not work on Android
       );
       onDeviceRegistered(device);
       return device;

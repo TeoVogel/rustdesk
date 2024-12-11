@@ -1,12 +1,10 @@
-import 'dart:io';
-
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/kvm/constants.dart';
 import 'package:flutter_hbb/kvm/data/kvm_api.dart';
 import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
+import 'package:flutter_hbb/kvm/kvm_utils.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:get/get.dart';
 
@@ -28,14 +26,6 @@ class KVMService {
   void start(KVMStateProvider kvmState) async {
     this.kvmState = kvmState;
     setHeartbeatRefreshRate();
-
-    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-    if (Platform.isAndroid) {
-      AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-      print('Serial No : ${androidInfo.serialNumber}');
-      print('id : ${androidInfo.id}');
-      print(androidInfo.id);
-    }
   }
 
   static void setHeartbeatRefreshRate() {
@@ -78,6 +68,7 @@ class KVMService {
         authToken: kvmState.authToken,
         rustId: sentRustId,
         rustPass: sentRustPass,
+        memLoadMb: KVMUtils.getUsedRAMInMB(),
       );
       print("HEARTBEAT SENT");
       lastKnownRustId = sentRustId ?? lastKnownRustId;
