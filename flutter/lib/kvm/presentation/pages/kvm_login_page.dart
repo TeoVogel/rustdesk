@@ -120,7 +120,7 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text("Igresar"),
+                              Text("Ingresar"),
                               if (isLogingIn)
                                 Padding(
                                   padding: const EdgeInsets.only(left: 8),
