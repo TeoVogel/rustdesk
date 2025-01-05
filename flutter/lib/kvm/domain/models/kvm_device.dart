@@ -11,7 +11,7 @@ class KVMDevice {
         name = json['name'] as String,
         id_rust = json['id_rust'] as String?,
         pass_rust = json['pass_rust'] as String?,
-        serialno = json['serialno'] as String,
+        serialno = json['serial_number'] as String,
         folder_id = json['folder_id'] as int;
 
   @override

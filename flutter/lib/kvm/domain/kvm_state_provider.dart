@@ -14,23 +14,28 @@ class KVMStateProvider with ChangeNotifier {
 
   KVMStateProvider() {
     kvmSessionDatasource.getRefreshToken().then((refreshToken) async {
-      if (refreshToken != null) {
+        int? deviceId = await kvmSessionDatasource.getDeviceId();
+        if (refreshToken != null && deviceId != null) {
         try {
           KVMSession session = await _apiRequest(() {
-            return KVMApi.refreshTokens(refreshToken);
-          });
-          int? deviceId = await kvmSessionDatasource.getDeviceId();
+              return KVMApi.refreshToken(
+                deviceId.toString(),
+                refreshToken,
+              );
+            });
           KVMDevice? device = await _apiRequest(() {
-            return KVMApi.getDevice(deviceId, authToken: session.authToken);
+              return KVMApi.getDevice(
+                deviceId,
+                authToken: session.authToken,
+              );
           });
           onSessionRestored(session, device);
-        } on Exception catch (e) {
+          } on Exception catch (_) {}
+        } else {
           onUserSessionExpired();
         }
-      } else {
-        onUserSessionExpired();
-      }
-    });
+      },
+    );
   }
 
   final kvmSessionDatasource = KVMSessionDatasource();
@@ -96,7 +101,7 @@ class KVMStateProvider with ChangeNotifier {
   Future<T> _apiRequest<T>(Future<T> Function() request) async {
     try {
       return await request();
-    } on KVMAuthError catch (e) {
+    } on KVMAuthError catch (_) {
       onUserSessionExpired();
     } on KVMApiError catch (e) {
       return Future.error(e);

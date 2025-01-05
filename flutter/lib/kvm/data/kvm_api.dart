@@ -1,13 +1,11 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/kvm/constants.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_device.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_session.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
-import 'package:flutter_hbb/kvm/kvm_service.dart';
 import 'package:http/http.dart' as http;
 
 abstract class KVMApi {
@@ -19,7 +17,7 @@ abstract class KVMApi {
 
   static Future<(KVMSession, KVMDevice?)> login(
       String username, String password, String serialNO) async {
-    final endpoint = "auth/token?serialno=$serialNO";
+    final endpoint = "auth/token?serial_number=$serialNO";
     try {
       Map<String, String> headers = {};
       headers['Content-Type'] = "application/x-www-form-urlencoded";
@@ -45,12 +43,13 @@ abstract class KVMApi {
     }
   }
 
-  static Future<KVMSession> refreshTokens(String refreshToken) async {
-    final endpoint = "auth/token?refresh_token=$refreshToken";
+  static Future<KVMSession> refreshToken(
+      String deviceId, String refreshToken) async {
+    final endpoint = "auth/device/$deviceId/connect/$refreshToken";
     try {
       Map<String, String> headers = {};
       headers['Content-Type'] = "application/x-www-form-urlencoded";
-      final response = await http.put(
+      final response = await http.get(
         Uri.parse(getKVMApiUrl(endpoint)),
         headers: headers,
       );
@@ -151,7 +150,7 @@ abstract class KVMApi {
               "id_rust": "",
               "pass_rust": "",
               "last_screenshot_path": "",
-              "serialno": serialNO,
+              "serial_number": serialNO,
               "folder_id": folder.id,
               "SO_name": soName,
               "SO_version": soVersion,

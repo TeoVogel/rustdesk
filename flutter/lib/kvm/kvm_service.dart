@@ -74,12 +74,6 @@ class KVMService {
       lastKnownRustId = sentRustId ?? lastKnownRustId;
       lastKnownRustPass = sentRustPass ?? lastKnownRustPass;
       lastHeartBeatTimestamp = DateTime.now();
-
-      KVMApi.refreshTokens(kvmState.session?.refreshToken ?? "").then(
-        (session) {
-          kvmState.onRefreshToken(session);
-        },
-      ).catchError((e) {});
     } on KVMAuthError {
       kvmState.onUserSessionExpired();
     } on KVMApiError {
