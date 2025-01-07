@@ -213,7 +213,7 @@ abstract class KVMApi {
     }
   }
 
-  static Future<String> heartbeat(
+  static Future<int?> heartbeat(
     int deviceId, {
     String? rustId,
     String? rustPass,
@@ -239,8 +239,8 @@ abstract class KVMApi {
       );
 
       Map<String, dynamic> json = jsonDecode(response.body);
-      if (response.statusCode == 200 && json.containsKey('timestamp')) {
-        return json['timestamp'];
+      if (response.statusCode == 200 && json.containsKey('heartbeat_s')) {
+        return json['heartbeat_s'];
       } else {
         throw KVMApiError(error: "${response.statusCode}: ${response.body}");
       }

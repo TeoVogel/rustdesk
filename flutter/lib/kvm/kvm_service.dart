@@ -23,6 +23,8 @@ class KVMService {
 
   late KVMStateProvider kvmState;
 
+  int? heartbeatS;
+
   void start(KVMStateProvider kvmState) async {
     this.kvmState = kvmState;
     setHeartbeatRefreshRate();
@@ -50,7 +52,7 @@ class KVMService {
       var credentialsChanged = sentRustId != null || sentRustPass != null;
       var shouldSendHeartBeat = credentialsChanged ||
           lastHeartBeatTimestamp.isBefore(DateTime.now().subtract(
-            Duration(seconds: heartBeatIntervalInSeconds),
+            Duration(seconds: heartbeatS ?? defaultHeartbeatS),
           ));
 
       if (shouldSendHeartBeat) {
@@ -63,13 +65,14 @@ class KVMService {
 
   void sendHeartBeat(String? sentRustId, String? sentRustPass) async {
     try {
-      await KVMApi.heartbeat(
+      final heartbeatS = await KVMApi.heartbeat(
         kvmState.registeredDeviceId!,
         authToken: kvmState.authToken,
         rustId: sentRustId,
         rustPass: sentRustPass,
         memLoadMb: KVMUtils.getUsedRAMInMB(),
       );
+      this.heartbeatS = heartbeatS;
       print("HEARTBEAT SENT");
       lastKnownRustId = sentRustId ?? lastKnownRustId;
       lastKnownRustPass = sentRustPass ?? lastKnownRustPass;
