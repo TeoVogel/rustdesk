@@ -45,13 +45,16 @@ abstract class KVMApi {
 
   static Future<KVMSession> refreshToken(
       String deviceId, String refreshToken) async {
-    final endpoint = "auth/device/$deviceId/connect/$refreshToken";
+    final endpoint = "auth/device/$deviceId/login";
     try {
       Map<String, String> headers = {};
-      headers['Content-Type'] = "application/x-www-form-urlencoded";
-      final response = await http.get(
+      headers['Content-Type'] = "application/json";
+      final response = await http.post(
         Uri.parse(getKVMApiUrl(endpoint)),
         headers: headers,
+        body: jsonEncode({
+          "refresh_token": refreshToken,
+        }),
       );
 
       Map<String, dynamic> json = jsonDecode(response.body);
