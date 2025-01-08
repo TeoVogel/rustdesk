@@ -235,7 +235,11 @@ abstract class KVMApi {
                   "MEM_load_mb": memLoadMb,
                 },
               )
-            : jsonEncode({}),
+            : jsonEncode(
+                {
+                  "MEM_load_mb": memLoadMb,
+                },
+              ),
       );
 
       Map<String, dynamic> json = jsonDecode(response.body);
