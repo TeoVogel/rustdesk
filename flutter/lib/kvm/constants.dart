@@ -1,8 +1,7 @@
 //const kvmApi = "your-kvm-api";
 const kvmApi = "https://kvm.jmbajo.com/api";
 
-const heartBeatIntervalInSeconds = 60;
-const credentialsControlInSeconds = 5; // edit this in the common.kt file
+const defaultHeartbeatS = 60;
 
 const String? prefilledEmail = null;
 const String? prefilledPass = null;
