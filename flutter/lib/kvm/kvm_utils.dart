@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:disk_space/disk_space.dart';
+//import 'package:disk_space/disk_space.dart';
 import 'package:system_info2/system_info2.dart';
 import 'package:windows_system_info/windows_system_info.dart';
 
@@ -11,6 +11,9 @@ abstract class KVMUtils {
       DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
       AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
       if (androidInfo.serialNumber.contains("unknown")) {
+        // tries to return the AndroidId. Returns build id otherwise
+        //return await AndroidId().getId() ?? androidInfo.id;
+        //return (await dip.DeviceInfoPlatform.instance.androidInfo()).androidId;
         return androidInfo.id;
       }
       return androidInfo.serialNumber;
@@ -63,6 +66,6 @@ abstract class KVMUtils {
   }
 
   static Future<int> getFreeDiskSpaceInMB() async {
-    return (await DiskSpace.getFreeDiskSpace)?.toInt() ?? -1;
+    return -1; //(await DiskSpace.getFreeDiskSpace)?.toInt() ?? -1;
   }
 }
