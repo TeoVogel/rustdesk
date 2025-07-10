@@ -32,6 +32,11 @@ import hbb.MessageOuterClass.KeyEvent
 import hbb.MessageOuterClass.KeyboardMode
 import hbb.KeyEventConverter
 
+import java.io.BufferedReader
+import java.io.IOException
+import java.io.InputStreamReader
+import java.util.concurrent.TimeUnit
+
 const val LIFT_DOWN = 9
 const val LIFT_MOVE = 8
 const val LIFT_UP = 10
@@ -271,6 +276,7 @@ class InputService : AccessibilityService() {
 
     @RequiresApi(Build.VERSION_CODES.N)
     fun onKeyEvent(data: ByteArray) {
+        Log.d("ADBCommand", "sendADBKey from if")
         val keyEvent = KeyEvent.parseFrom(data)
         val keyboardMode = keyEvent.getMode()
 
@@ -303,7 +309,9 @@ class InputService : AccessibilityService() {
                         }
                     } else {
                         KeyEventConverter.toAndroidKeyEvent(keyEvent).let { event ->
-                            inputConnection.sendKeyEvent(event)
+                            Log.d("ADBCommand", "sendADBKey from if")
+                            sendADBKey(event)
+                            //inputConnection.sendKeyEvent(event)
                         }
                     }
                 }
@@ -315,13 +323,60 @@ class InputService : AccessibilityService() {
                     val possibleNodes = possibleAccessibiltyNodes()
                     Log.d(logTag, "possibleNodes:$possibleNodes")
                     for (item in possibleNodes) {
-                        val success = trySendKeyEvent(event, item, textToCommit)
-                        if (success) {
-                            break
-                        }
+                        Log.d("ADBCommand", "sendADBKey from else")
+                        sendADBKey(event)
+                        break
+                        //val success = trySendKeyEvent(event, item, textToCommit)
+                        //if (success) {
+                        //    break
+                        //}
                     }
                 }
             }
+        } 
+    }
+
+    private fun sendADBKey(event: android.view.KeyEvent) {
+        if (event.action != android.view.KeyEvent.ACTION_UP) {
+            Log.d("SIA", "onKeyEvent aborted, not ACTION_UP")
+            return
+        }
+
+        Log.d("SIA", "onKeyEvent sending ADB keyevent")
+        var process: Process? = null
+        try {
+            var adbCommand = "input keyevent ${event.keyCode}"
+            //process = Runtime.getRuntime().exec(arrayOf("su", "-c", adbCommand))
+            process = Runtime.getRuntime().exec("su")
+            process.outputStream.write(adbCommand.toByteArray())
+            process.outputStream.flush()
+            process.outputStream.close()
+            // Capture output streams
+            val outputStream = BufferedReader(InputStreamReader(process.inputStream))
+            val errorStream = BufferedReader(InputStreamReader(process.errorStream))
+
+            // Wait for the process to complete
+            val exitCode = process.waitFor()
+
+            // Read the output
+            val output = outputStream.readText()
+            val error = errorStream.readText()
+            
+            outputStream.close()
+            errorStream.close()
+
+            // Log everything
+            Log.d("ADBCommand", "Exit code: $exitCode")
+            Log.d("ADBCommand", "Output: $output")
+            Log.d("ADBCommand", "Error: $error")
+
+            Log.d("SIA", "onKeyEvent sending ADB keyevent success")
+        } catch (e: IOException) {
+            Log.d("SIA", "onKeyEvent sending ADB keyevent failed $e")
+            throw RuntimeException(e)
+        } catch (e: Exception) {
+            Log.d("SIA", "onKeyEvent sending ADB keyevent failed $e")
+            throw RuntimeException(e)
         }
     }
 
