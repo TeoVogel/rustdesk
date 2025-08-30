@@ -37,6 +37,22 @@ class KVMService {
     );
   }
 
+  static Future<String?> getMacAddress() async {
+    return await platformFFI.invokeMethod(AndroidKVMChannel.kGetMacAddres);
+  }
+
+  static Future<String?> getAndroidId() async {
+    return await platformFFI.invokeMethod(AndroidKVMChannel.kGetAndroidId);
+  }
+
+  static Future<String?> getSerialNo() async {
+    return await platformFFI.invokeMethod(AndroidKVMChannel.kGetSerialNo);
+  }
+
+  static Future<String?> getKVMId() async {
+    return await platformFFI.invokeMethod(AndroidKVMChannel.kGetKVMId);
+  }
+
   void checkCredentialsAndSendHeartBeat() {
     if (model.isStart) {
       final currentRustId = model.serverId.value.text.removeAllWhitespace;

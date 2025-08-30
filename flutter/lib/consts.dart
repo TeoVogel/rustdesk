@@ -234,6 +234,10 @@ class AndroidChannel {
 /// KVM integration
 class AndroidKVMChannel {
   static final kSetHeartbeatRefreshRate = "set_heartbeat_refresh_rate";
+  static final kGetMacAddres = "get_mac_address";
+  static final kGetAndroidId = "get_android_id";
+  static final kGetSerialNo = "get_serial_no";
+  static final kGetKVMId = "get_kvm_id";
 }
 
 const kHeartbeatDefaultRefreshRate = 20;

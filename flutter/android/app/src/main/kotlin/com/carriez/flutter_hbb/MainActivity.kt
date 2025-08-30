@@ -13,12 +13,15 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Build
 import android.os.IBinder
+import android.provider.Settings
 import android.util.Log
 import android.view.WindowManager
 import com.hjq.permissions.XXPermissions
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.net.NetworkInterface
+import java.util.Collections
 
 
 class MainActivity : FlutterActivity() {
@@ -222,10 +225,92 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
 
                 }
+                GET_MAC_ADDRESS -> {
+                    result.success(getWifiMacAddress())
+                }
+                GET_ANDROID_ID -> {
+                    result.success(getAndroidId())
+                }
+                GET_SERIAL_NO -> {
+                    result.success(getSerialNo())
+                }
+                GET_KVM_ID -> {
+                    result.success(getKVMId())
+                }
                 else -> {
                     result.error("-1", "No such method", null)
                 }
             }
         }
+    }
+
+    private fun getKVMId(): String? {
+        if (isGeniatechAndroid11() || isGeniatechAndroid6()) {
+            return getSerialNo()
+        }
+
+        return getWifiMacAddress() ?: getAndroidId();
+    }
+
+    private fun getWifiMacAddress(): String? {
+        try {
+            val all: MutableList<NetworkInterface> = Collections.list<NetworkInterface?>(
+                NetworkInterface.getNetworkInterfaces()
+            )
+
+            for (nif in all) {
+                if (!nif.getName().equals("wlan0", ignoreCase = true)) continue
+
+                val macBytes = nif.getHardwareAddress()
+
+                if (macBytes == null) {
+                    return null
+                }
+
+                val res1 = StringBuilder()
+                for (b in macBytes) {
+                    res1.append(String.format("%02x", (b.toInt() and 0xFF)) + ":")
+                }
+
+                if (res1.length > 0) {
+                    res1.deleteCharAt(res1.length - 1)
+                }
+                return res1.toString()
+            }
+        } catch (ex: Exception) {
+            return ex.toString()
+        }
+
+        return null
+    }
+
+    private fun getAndroidId(): String? {
+        return try {
+            return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun getSerialNo(): String? {
+        return try {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Build.getSerial()
+            } else {
+                 Build.SERIAL
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun isGeniatechAndroid6(): Boolean {
+        return android.os.Build.MODEL.lowercase() == ("Dex Media Player 4K Live").lowercase()
+                && android.os.Build.MANUFACTURER.lowercase() == "realtek".lowercase()
+    }
+
+    private fun isGeniatechAndroid11(): Boolean {
+        return android.os.Build.MODEL.lowercase() == ("Dex Computer").lowercase()
+                && android.os.Build.MANUFACTURER.lowercase() == "rockchip".lowercase()
     }
 }
