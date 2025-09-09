@@ -35,6 +35,7 @@ import hbb.KeyEventConverter
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
+import java.nio.charset.Charset
 import java.util.concurrent.TimeUnit
 
 const val LIFT_DOWN = 9
@@ -345,8 +346,12 @@ class InputService : AccessibilityService() {
         Log.d("SIA", "onKeyEvent sending ADB keyevent")
         var process: Process? = null
         try {
-            var adbCommand = "input keyevent ${event.keyCode}"
+
+            // v1
             //process = Runtime.getRuntime().exec(arrayOf("su", "-c", adbCommand))
+            
+            // v2
+            /*var adbCommand = "input keyevent ${event.keyCode}"
             process = Runtime.getRuntime().exec("su")
             process.outputStream.write(adbCommand.toByteArray())
             process.outputStream.flush()
@@ -361,7 +366,6 @@ class InputService : AccessibilityService() {
             // Read the output
             val output = outputStream.readText()
             val error = errorStream.readText()
-            
             outputStream.close()
             errorStream.close()
 
@@ -369,6 +373,17 @@ class InputService : AccessibilityService() {
             Log.d("ADBCommand", "Exit code: $exitCode")
             Log.d("ADBCommand", "Output: $output")
             Log.d("ADBCommand", "Error: $error")
+            */
+
+            // v3
+            val adbCommand = "input keyevent ${event.keyCode}\n"
+            val process = Runtime.getRuntime().exec("su")
+            process.outputStream.use { outputStream ->
+                outputStream.write(adbCommand.toByteArray(charset = Charsets.US_ASCII))
+                outputStream.flush()
+            }
+            // Optionally wait for the process to finish
+            process.waitFor()
 
             Log.d("SIA", "onKeyEvent sending ADB keyevent success")
         } catch (e: IOException) {

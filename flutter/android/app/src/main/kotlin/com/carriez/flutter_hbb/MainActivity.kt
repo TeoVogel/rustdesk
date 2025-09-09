@@ -20,6 +20,9 @@ import com.hjq.permissions.XXPermissions
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.BufferedReader
+import java.io.IOException
+import java.io.InputStreamReader
 import java.net.NetworkInterface
 import java.util.Collections
 
@@ -246,7 +249,7 @@ class MainActivity : FlutterActivity() {
 
     private fun getKVMId(): String? {
         if (isGeniatechAndroid11() || isGeniatechAndroid6()) {
-            return getSerialNo()
+            return getSerialNo() ?: getWifiMacAddress() ?: getAndroidId()
         }
 
         return getWifiMacAddress() ?: getAndroidId();
@@ -293,6 +296,15 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun getSerialNo(): String? {
+        return try {
+            val c = Class.forName("android.os.SystemProperties")
+            val get = c.getMethod("get", String::class.java, String::class.java )
+            val serialNo = (get.invoke(c, "ro.serialno", "")) as String
+            return serialNo
+        } catch (e: Exception) {
+            e.toString()
+        }
+
         return try {
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 Build.getSerial()
