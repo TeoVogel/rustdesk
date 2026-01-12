@@ -1,3 +1,4 @@
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/kvm/constants.dart';
 import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
@@ -26,6 +27,16 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
     usernameController.text = prefilledEmail ?? "";
     passwordController.text = prefilledPass ?? "";
     super.initState();
+
+    final appLinks = AppLinks(); // AppLinks is singleton
+    // Subscribe to all events (initial link and further)
+    appLinks.uriLinkStream.listen((uri) {
+      WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+        showDialog(
+            context: context,
+            builder: (context) => AlertDialog(title: Text(uri.toString())));
+      });
+    });
   }
 
   @override

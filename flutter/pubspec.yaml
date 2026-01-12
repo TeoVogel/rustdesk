@@ -115,6 +115,7 @@ dependencies:
   #disk_space: ^0.2.1
   #android_id: ^0.4.0
   device_info_platform_interface: ^2.0.1
+  app_links: ^6.2.1
 
 dev_dependencies:
   icons_launcher: ^2.0.4
