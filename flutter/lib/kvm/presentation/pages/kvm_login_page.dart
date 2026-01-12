@@ -2,6 +2,7 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/kvm/constants.dart';
 import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
+import 'package:flutter_hbb/kvm/kvm_service.dart';
 import 'package:provider/provider.dart';
 
 class KVMLoginPage extends StatefulWidget {
@@ -167,6 +168,22 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
                             ),
                           ],
                         ),
+                      SizedBox(height: 8),
+                      Text("KVM build number: $buildNumber"),
+                      Text(buildDate),
+                      SizedBox(height: 8),
+                      FutureBuilder(
+                          future: KVMService.getKVMId(),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData || snapshot.data == null) {
+                              return LinearProgressIndicator();
+                            }
+
+                            return Text(
+                              snapshot.data!,
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            );
+                          }),
                       SizedBox(height: 24),
                     ],
                   ),
