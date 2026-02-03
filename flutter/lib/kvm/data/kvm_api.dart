@@ -222,7 +222,9 @@ abstract class KVMApi {
   }) async {
     final endpoint = "devices/$deviceId/heartbeat";
     try {
-      var headers = getKVMHttpHeaders(authToken);
+      // var headers = getKVMHttpHeaders(authToken);
+      // test sending always null on header auth token
+      var headers = getKVMHttpHeaders(null);
       headers['Content-Type'] = "application/json";
       final response = await http.post(
         Uri.parse(getKVMApiUrl(endpoint)),

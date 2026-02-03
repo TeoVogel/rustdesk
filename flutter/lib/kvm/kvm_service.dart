@@ -19,7 +19,7 @@ class KVMService {
 
   String? lastKnownRustId;
   String? lastKnownRustPass;
-  DateTime lastHeartBeatTimestamp = DateTime.now();
+  DateTime? lastHeartBeatTimestamp;
 
   late KVMStateProvider kvmState;
 
@@ -66,8 +66,9 @@ class KVMService {
         sentRustPass = currentRustPass;
       }
       var credentialsChanged = sentRustId != null || sentRustPass != null;
-      var shouldSendHeartBeat = credentialsChanged ||
-          lastHeartBeatTimestamp.isBefore(DateTime.now().subtract(
+      var shouldSendHeartBeat = credentialsChanged || 
+          lastHeartBeatTimestamp == null ||
+          lastHeartBeatTimestamp!.isBefore(DateTime.now().subtract(
             Duration(seconds: heartbeatS ?? defaultHeartbeatS),
           ));
 

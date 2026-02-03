@@ -426,7 +426,8 @@ class MainService : Service() {
     fun stopCapture() {
         Log.d(logTag, "Stop Capture")
         // ## KVM integration
-        heartbeatHandler.removeCallbacks(heartbeatRunnable)
+        // test seinding the heartbeat eve when capture stops
+        // heartbeatHandler.removeCallbacks(heartbeatRunnable)
         setFrameRawEnable("video",false)
         setFrameRawEnable("audio",false)
         _isStart = false
