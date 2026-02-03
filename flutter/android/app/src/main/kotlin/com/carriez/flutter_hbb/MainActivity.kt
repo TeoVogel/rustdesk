@@ -26,6 +26,8 @@ import java.io.InputStreamReader
 import java.net.NetworkInterface
 import java.util.Collections
 
+import java.io.File
+
 
 class MainActivity : FlutterActivity() {
     companion object {
@@ -229,7 +231,7 @@ class MainActivity : FlutterActivity() {
 
                 }
                 GET_MAC_ADDRESS -> {
-                    result.success(getWifiMacAddress())
+                    result.success(getMacAddressEth())
                 }
                 GET_ANDROID_ID -> {
                     result.success(getAndroidId())
@@ -249,42 +251,22 @@ class MainActivity : FlutterActivity() {
 
     private fun getKVMId(): String? {
         if (isGeniatechAndroid11() || isGeniatechAndroid6()) {
-            return getSerialNo() ?: getWifiMacAddress() ?: getAndroidId()
+            return getSerialNo() ?: getMacAddressEth() ?: getAndroidId()
         }
 
-        return getWifiMacAddress() ?: getAndroidId();
+        return getMacAddressEth() ?: getAndroidId()
     }
 
-    private fun getWifiMacAddress(): String? {
-        try {
-            val all: MutableList<NetworkInterface> = Collections.list<NetworkInterface?>(
-                NetworkInterface.getNetworkInterfaces()
-            )
-
-            for (nif in all) {
-                if (!nif.getName().equals("wlan0", ignoreCase = true)) continue
-
-                val macBytes = nif.getHardwareAddress()
-
-                if (macBytes == null) {
-                    return null
-                }
-
-                val res1 = StringBuilder()
-                for (b in macBytes) {
-                    res1.append(String.format("%02x", (b.toInt() and 0xFF)) + ":")
-                }
-
-                if (res1.length > 0) {
-                    res1.deleteCharAt(res1.length - 1)
-                }
-                return res1.toString()
-            }
-        } catch (ex: Exception) {
-            return ex.toString()
+    fun getMacAddressEth(): String? {
+        return try {
+            File("/sys/class/net/eth0/address")
+                .readText()
+                .uppercase()
+                .substring(0, 17)
+        } catch (e: IOException) {
+            e.printStackTrace()
+            null
         }
-
-        return null
     }
 
     private fun getAndroidId(): String? {
