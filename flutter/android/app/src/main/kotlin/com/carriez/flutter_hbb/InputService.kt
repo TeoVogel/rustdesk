@@ -338,6 +338,16 @@ class InputService : AccessibilityService() {
     }
 
     private fun sendADBKey(event: android.view.KeyEvent) {
+
+        // Detect Ctrl + F
+        if (event.isCtrlPressed && event.keyCode == android.view.KeyEvent.KEYCODE_F) {
+            // Only trigger once (on key up)
+            if (event.action == android.view.KeyEvent.ACTION_UP) {
+                sendCtrlF()
+            }
+            return
+        }
+
         if (event.action != android.view.KeyEvent.ACTION_UP) {
             Log.d("SIA", "onKeyEvent aborted, not ACTION_UP")
             return
@@ -393,6 +403,51 @@ class InputService : AccessibilityService() {
             Log.d("SIA", "onKeyEvent sending ADB keyevent failed $e")
             throw RuntimeException(e)
         }
+    }
+
+    fun findKeyboardEvent(): String {
+        val process = Runtime.getRuntime().exec("su")
+        process.outputStream.use {
+            it.write("getevent -lp\n".toByteArray())
+            it.flush()
+        }
+
+        val output = process.inputStream.bufferedReader().readText()
+        process.waitFor()
+
+        val devices = output.split("add device")
+        for (device in devices) {
+            if (
+                device.contains("KEY_LEFTCTRL") ||
+                device.contains("KEY_A") && device.contains("KEY_Z")
+            ) {
+                val match = Regex("/dev/input/event\\d+").find(device)
+                if (match != null) {
+                    return match.value
+                }
+            }
+        }
+
+        throw IllegalStateException("Keyboard device not found")
+    }
+
+    fun sendCtrlF() {
+        val event = findKeyboardEvent()
+
+        val cmd = """
+            sendevent $event 1 29 1
+            sendevent $event 1 33 1
+            sendevent $event 1 33 0
+            sendevent $event 1 29 0
+            sendevent $event 0 0 0
+        """.trimIndent()
+
+        val process = Runtime.getRuntime().exec("su")
+        process.outputStream.use {
+            it.write(cmd.toByteArray())
+            it.flush()
+        }
+        process.waitFor()
     }
 
     private fun insertAccessibilityNode(list: LinkedList<AccessibilityNodeInfo>, node: AccessibilityNodeInfo) {
