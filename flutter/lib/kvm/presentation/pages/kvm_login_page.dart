@@ -171,19 +171,6 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
                       SizedBox(height: 8),
                       Text("KVM build number: $buildNumber"),
                       Text(buildDate),
-                      SizedBox(height: 8),
-                      FutureBuilder(
-                          future: KVMService.getKVMId(),
-                          builder: (context, snapshot) {
-                            if (!snapshot.hasData || snapshot.data == null) {
-                              return LinearProgressIndicator();
-                            }
-
-                            return Text(
-                              snapshot.data!,
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            );
-                          }),
                       SizedBox(height: 24),
                     ],
                   ),
