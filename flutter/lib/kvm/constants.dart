@@ -12,5 +12,5 @@ const String? relayServer = null;
 const String? apiServer = null;
 const String? key = null;
 
-const int buildNumber = 1;
-const String buildDate = "12/01/2026";
+const int buildNumber = 6;
+const String buildDate = "09/02/2026";

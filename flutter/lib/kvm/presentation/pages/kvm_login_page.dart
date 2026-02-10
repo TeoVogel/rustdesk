@@ -1,8 +1,9 @@
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/kvm/constants.dart';
+import 'package:flutter_hbb/kvm/data/kvm_server_configs.dart';
 import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
-import 'package:flutter_hbb/kvm/kvm_service.dart';
+import 'package:flutter_hbb/kvm/domain/models/kvm_server_config.dart';
 import 'package:provider/provider.dart';
 
 class KVMLoginPage extends StatefulWidget {
@@ -16,6 +17,8 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
   final usernameController = TextEditingController();
   final passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  KVMServerModel? selectedServer;
 
   String? signInError;
 
@@ -169,6 +172,43 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
                           ],
                         ),
                       SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border:
+                              Border.all(color: Theme.of(context).dividerColor),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Server config",
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            ...kvmServers.map((server) {
+                              return RadioListTile<KVMServerModel>(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(server.name),
+                                value: server,
+                                groupValue: selectedServer,
+                                onChanged: (value) {
+                                  setState(() {
+                                    selectedServer = value;
+                                  });
+
+                                  _onServerSelected(value!);
+                                },
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 8),
                       Text("KVM build number: $buildNumber"),
                       Text(buildDate),
                       SizedBox(height: 24),
@@ -206,5 +246,12 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
   void displayErrorSnackbar(String message, BuildContext context) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _onServerSelected(KVMServerModel server) async {
+    final result = await context
+        .read<KVMStateProvider>()
+        .setRustdeskServerConfig(server.config);
+    debugPrint("setRustdeskServerConfig: $result");
   }
 }

@@ -58,5 +58,8 @@ SliverAppBar getKVMSliverAppBar(BuildContext context) => SliverAppBar.large(
 
 void showServerSettings(OverlayDialogManager dialogManager) async {
   Map<String, dynamic> options = jsonDecode(await bind.mainGetOptions());
-  showServerSettingsWithValue(ServerConfig.fromOptions(options), dialogManager);
+  
+  var serverConfig = ServerConfig.fromOptions(options);
+
+  showServerSettingsWithValue(serverConfig, dialogManager);
 }

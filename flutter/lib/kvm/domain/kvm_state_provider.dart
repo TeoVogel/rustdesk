@@ -1,6 +1,9 @@
 
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/kvm/data/kvm_api.dart';
 import 'package:flutter_hbb/kvm/data/kvm_session_datasource.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_device.dart';
@@ -9,6 +12,7 @@ import 'package:flutter_hbb/kvm/domain/models/kvm_session.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
 import 'package:flutter_hbb/kvm/kvm_utils.dart';
 import 'package:flutter_hbb/kvm/presentation/kvm_state.dart';
+import 'package:flutter_hbb/models/platform_model.dart';
 
 class KVMStateProvider with ChangeNotifier {
 
@@ -148,6 +152,17 @@ class KVMStateProvider with ChangeNotifier {
       onDeviceRegistered(device);
       return device;
     });
+  }
+
+  Future<ServerConfig> getCurrentRustdeskServerConfig() async {
+    Map<String, dynamic> options =
+        await jsonDecode(await bind.mainGetOptions());
+
+    return ServerConfig.fromOptions(options);
+  }
+
+  Future<bool> setRustdeskServerConfig(ServerConfig config) async {
+    return await setServerConfig(null, null, config);
   }
   
 }

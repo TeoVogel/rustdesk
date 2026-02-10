@@ -340,11 +340,15 @@ class InputService : AccessibilityService() {
     private fun sendADBKey(event: android.view.KeyEvent) {
 
         // Detect Ctrl + F
-        if (event.isCtrlPressed && event.keyCode == android.view.KeyEvent.KEYCODE_F) {
+        /*if (event.isCtrlPressed && event.keyCode == android.view.KeyEvent.KEYCODE_F) {
             // Only trigger once (on key up)
             if (event.action == android.view.KeyEvent.ACTION_UP) {
                 sendCtrlF()
             }
+            return
+        }*/
+        if (event.isCtrlPressed && event.action == android.view.KeyEvent.ACTION_UP) {
+            sendCtrlCombo(event.keyCode)
             return
         }
 
@@ -403,6 +407,56 @@ class InputService : AccessibilityService() {
             Log.d("SIA", "onKeyEvent sending ADB keyevent failed $e")
             throw RuntimeException(e)
         }
+    }
+
+
+    private val androidToLinuxKeyMap = mapOf(
+        android.view.KeyEvent.KEYCODE_A to 30, // KEY_A
+        android.view.KeyEvent.KEYCODE_B to 48,
+        android.view.KeyEvent.KEYCODE_C to 46,
+        android.view.KeyEvent.KEYCODE_D to 32,
+        android.view.KeyEvent.KEYCODE_E to 18,
+        android.view.KeyEvent.KEYCODE_F to 33,
+        android.view.KeyEvent.KEYCODE_G to 34,
+        android.view.KeyEvent.KEYCODE_H to 35,
+        android.view.KeyEvent.KEYCODE_I to 23,
+        android.view.KeyEvent.KEYCODE_J to 36,
+        android.view.KeyEvent.KEYCODE_K to 37,
+        android.view.KeyEvent.KEYCODE_L to 38,
+        android.view.KeyEvent.KEYCODE_M to 50,
+        android.view.KeyEvent.KEYCODE_N to 49,
+        android.view.KeyEvent.KEYCODE_O to 24,
+        android.view.KeyEvent.KEYCODE_P to 25,
+        android.view.KeyEvent.KEYCODE_Q to 16,
+        android.view.KeyEvent.KEYCODE_R to 19,
+        android.view.KeyEvent.KEYCODE_S to 31,
+        android.view.KeyEvent.KEYCODE_T to 20,
+        android.view.KeyEvent.KEYCODE_U to 22,
+        android.view.KeyEvent.KEYCODE_V to 47,
+        android.view.KeyEvent.KEYCODE_W to 17,
+        android.view.KeyEvent.KEYCODE_X to 45,
+        android.view.KeyEvent.KEYCODE_Y to 21,
+        android.view.KeyEvent.KEYCODE_Z to 44
+    )
+
+    fun sendCtrlCombo(androidKeyCode: Int) {
+        val linuxKeyCode = androidToLinuxKeyMap[androidKeyCode] ?: return
+        val event = findKeyboardEvent()
+
+        val cmd = """
+        sendevent $event 1 29 1
+        sendevent $event 1 $linuxKeyCode 1
+        sendevent $event 1 $linuxKeyCode 0
+        sendevent $event 1 29 0
+        sendevent $event 0 0 0
+    """.trimIndent()
+
+        val process = Runtime.getRuntime().exec("su")
+        process.outputStream.use {
+            it.write(cmd.toByteArray())
+            it.flush()
+        }
+        process.waitFor()
     }
 
     fun findKeyboardEvent(): String {
