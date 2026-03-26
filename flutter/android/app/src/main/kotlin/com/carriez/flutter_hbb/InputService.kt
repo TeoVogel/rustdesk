@@ -67,6 +67,14 @@ class InputService : AccessibilityService() {
     }
 
     private val logTag = "input service"
+
+    // ------------------------------------------------------------------
+    // FIX #1 - re-entrancy guard: prevents ADB injection from looping
+    // back through the IME pipeline on certain devices/ROMs and firing
+    // onKeyEvent a second time.
+    // ------------------------------------------------------------------
+    private var isInjectingKey = false
+
     private var leftIsDown = false
     private var touchPath = Path()
     private var lastTouchGestureStartTime = 0L
@@ -80,6 +88,12 @@ class InputService : AccessibilityService() {
     private var isWaitingLongPress = false
 
     private var fakeEditTextForTextStateCalculation: EditText? = null
+
+    // ------------------------------------------------------------------
+    // FIX #3 - cache the keyboard event device path so findKeyboardEvent()
+    // doesn't shell-exec on every single Ctrl combo.
+    // ------------------------------------------------------------------
+    private var cachedKeyboardEventDevice: String? = null
 
     @RequiresApi(Build.VERSION_CODES.N)
     fun onMouseInput(mask: Int, _x: Int, _y: Int) {
@@ -277,9 +291,10 @@ class InputService : AccessibilityService() {
 
     @RequiresApi(Build.VERSION_CODES.N)
     fun onKeyEvent(data: ByteArray) {
-        Log.d("ADBCommand", "sendADBKey from if")
         val keyEvent = KeyEvent.parseFrom(data)
         val keyboardMode = keyEvent.getMode()
+
+        Log.d("SIA", "onKeyEvent received - mode=$keyboardMode down=${keyEvent.getDown()} thread=${Thread.currentThread().name}")
 
         var textToCommit: String? = null
 
@@ -300,115 +315,107 @@ class InputService : AccessibilityService() {
         }
 
         Log.d(logTag, "onKeyEvent $keyEvent textToCommit:$textToCommit")
+        Log.d("SIA", "onKeyEvent parsed - textToCommit=$textToCommit isInjectingKey=$isInjectingKey")
 
         if (Build.VERSION.SDK_INT >= 33) {
+            Log.d("SIA", "onKeyEvent path: API>=33 branch")
             getInputMethod()?.let { inputMethod ->
                 inputMethod.getCurrentInputConnection()?.let { inputConnection ->
                     if (textToCommit != null) {
+                        Log.d("SIA", "onKeyEvent committing text via IME: $textToCommit")
                         textToCommit?.let { text ->
                             inputConnection.commitText(text, 1, null)
                         }
                     } else {
                         KeyEventConverter.toAndroidKeyEvent(keyEvent).let { event ->
-                            Log.d("ADBCommand", "sendADBKey from if")
+                            Log.d("SIA", "onKeyEvent converting to Android KeyEvent: keyCode=${event?.keyCode} action=${event?.action}")
                             sendADBKey(event)
-                            //inputConnection.sendKeyEvent(event)
                         }
                     }
-                }
-            }
+                } ?: Log.w("SIA", "onKeyEvent: getCurrentInputConnection() returned null")
+            } ?: Log.w("SIA", "onKeyEvent: getInputMethod() returned null")
         } else {
+            Log.d("SIA", "onKeyEvent path: legacy branch (API<33)")
             val handler = Handler(Looper.getMainLooper())
             handler.post {
                 KeyEventConverter.toAndroidKeyEvent(keyEvent)?.let { event ->
                     val possibleNodes = possibleAccessibiltyNodes()
                     Log.d(logTag, "possibleNodes:$possibleNodes")
+                    Log.d("SIA", "onKeyEvent legacy - possibleNodes count=${possibleNodes.size} keyCode=${event.keyCode} action=${event.action}")
                     for (item in possibleNodes) {
-                        Log.d("ADBCommand", "sendADBKey from else")
+                        Log.d("SIA", "onKeyEvent legacy - sending ADB key for node: $item")
                         sendADBKey(event)
                         break
-                        //val success = trySendKeyEvent(event, item, textToCommit)
-                        //if (success) {
-                        //    break
-                        //}
                     }
-                }
+                } ?: Log.w("SIA", "onKeyEvent legacy - toAndroidKeyEvent returned null")
             }
-        } 
+        }
     }
 
     private fun sendADBKey(event: android.view.KeyEvent) {
-
-        // Detect Ctrl + F
-        /*if (event.isCtrlPressed && event.keyCode == android.view.KeyEvent.KEYCODE_F) {
-            // Only trigger once (on key up)
-            if (event.action == android.view.KeyEvent.ACTION_UP) {
-                sendCtrlF()
-            }
+        // ------------------------------------------------------------------
+        // FIX #1 - re-entrancy guard.
+        // On some ROMs, injecting via 'input keyevent' while inside the IME
+        // callback causes onKeyEvent to fire again, doubling the input.
+        // ------------------------------------------------------------------
+        if (isInjectingKey) {
+            Log.w("SIA", "sendADBKey BLOCKED - re-entrant call detected! keyCode=${event.keyCode} action=${event.action}")
             return
-        }*/
+        }
+
+        Log.d("SIA", "sendADBKey CALLED - keyCode=${event.keyCode} action=${event.action} isCtrlPressed=${event.isCtrlPressed} thread=${Thread.currentThread().name}")
+
+        // ------------------------------------------------------------------
+        // FIX #2 - handle Ctrl combos before the ACTION_UP guard so they
+        // are never accidentally skipped.
+        // ------------------------------------------------------------------
         if (event.isCtrlPressed && event.action == android.view.KeyEvent.ACTION_UP) {
+            Log.d("SIA", "sendADBKey - detected Ctrl combo, delegating to sendCtrlCombo keyCode=${event.keyCode}")
             sendCtrlCombo(event.keyCode)
             return
         }
 
+        // Only dispatch plain keys on ACTION_UP (avoids double-fire from
+        // 'input keyevent' which internally generates DOWN + UP).
         if (event.action != android.view.KeyEvent.ACTION_UP) {
-            Log.d("SIA", "onKeyEvent aborted, not ACTION_UP")
+            Log.d("SIA", "sendADBKey - skipping, not ACTION_UP (action=${event.action})")
             return
         }
 
-        Log.d("SIA", "onKeyEvent sending ADB keyevent")
+        Log.d("SIA", "sendADBKey - executing 'input keyevent ${event.keyCode}' via su")
+
+        isInjectingKey = true
         var process: Process? = null
         try {
-
-            // v1
-            //process = Runtime.getRuntime().exec(arrayOf("su", "-c", adbCommand))
-            
-            // v2
-            /*var adbCommand = "input keyevent ${event.keyCode}"
-            process = Runtime.getRuntime().exec("su")
-            process.outputStream.write(adbCommand.toByteArray())
-            process.outputStream.flush()
-            process.outputStream.close()
-            // Capture output streams
-            val outputStream = BufferedReader(InputStreamReader(process.inputStream))
-            val errorStream = BufferedReader(InputStreamReader(process.errorStream))
-
-            // Wait for the process to complete
-            val exitCode = process.waitFor()
-
-            // Read the output
-            val output = outputStream.readText()
-            val error = errorStream.readText()
-            outputStream.close()
-            errorStream.close()
-
-            // Log everything
-            Log.d("ADBCommand", "Exit code: $exitCode")
-            Log.d("ADBCommand", "Output: $output")
-            Log.d("ADBCommand", "Error: $error")
-            */
-
-            // v3
             val adbCommand = "input keyevent ${event.keyCode}\n"
-            val process = Runtime.getRuntime().exec("su")
+            process = Runtime.getRuntime().exec("su")
             process.outputStream.use { outputStream ->
                 outputStream.write(adbCommand.toByteArray(charset = Charsets.US_ASCII))
                 outputStream.flush()
             }
-            // Optionally wait for the process to finish
-            process.waitFor()
 
-            Log.d("SIA", "onKeyEvent sending ADB keyevent success")
+            // ------------------------------------------------------------------
+            // FIX #4 - waitFor with timeout so a hung su shell on a specific
+            // device can't block indefinitely and let a second event race in.
+            // ------------------------------------------------------------------
+            val finished = process.waitFor(2, TimeUnit.SECONDS)
+            if (!finished) {
+                Log.w("SIA", "sendADBKey - process timed out for keyCode=${event.keyCode}, destroying")
+                process.destroy()
+            } else {
+                Log.d("SIA", "sendADBKey - process finished, exitCode=${process.exitValue()} keyCode=${event.keyCode}")
+            }
         } catch (e: IOException) {
-            Log.d("SIA", "onKeyEvent sending ADB keyevent failed $e")
+            Log.e("SIA", "sendADBKey - IOException for keyCode=${event.keyCode}: $e")
             throw RuntimeException(e)
         } catch (e: Exception) {
-            Log.d("SIA", "onKeyEvent sending ADB keyevent failed $e")
+            Log.e("SIA", "sendADBKey - Exception for keyCode=${event.keyCode}: $e")
             throw RuntimeException(e)
+        } finally {
+            isInjectingKey = false
+            Log.d("SIA", "sendADBKey - isInjectingKey reset to false")
         }
     }
-
 
     private val androidToLinuxKeyMap = mapOf(
         android.view.KeyEvent.KEYCODE_A to 30, // KEY_A
@@ -440,8 +447,16 @@ class InputService : AccessibilityService() {
     )
 
     fun sendCtrlCombo(androidKeyCode: Int) {
-        val linuxKeyCode = androidToLinuxKeyMap[androidKeyCode] ?: return
+        Log.d("SIA", "sendCtrlCombo - androidKeyCode=$androidKeyCode")
+        val linuxKeyCode = androidToLinuxKeyMap[androidKeyCode]
+        if (linuxKeyCode == null) {
+            Log.w("SIA", "sendCtrlCombo - no Linux key mapping for androidKeyCode=$androidKeyCode, aborting")
+            return
+        }
+
+        Log.d("SIA", "sendCtrlCombo - mapped to linuxKeyCode=$linuxKeyCode")
         val event = findKeyboardEvent()
+        Log.d("SIA", "sendCtrlCombo - using device=$event")
 
         val cmd = """
         sendevent $event 1 29 1
@@ -456,10 +471,26 @@ class InputService : AccessibilityService() {
             it.write(cmd.toByteArray())
             it.flush()
         }
-        process.waitFor()
+        val finished = process.waitFor(2, TimeUnit.SECONDS)
+        if (!finished) {
+            Log.w("SIA", "sendCtrlCombo - process timed out for linuxKeyCode=$linuxKeyCode, destroying")
+            process.destroy()
+        } else {
+            Log.d("SIA", "sendCtrlCombo - process finished exitCode=${process.exitValue()}")
+        }
     }
 
     fun findKeyboardEvent(): String {
+        // ------------------------------------------------------------------
+        // FIX #3 - return cached device path instead of shell-execing every
+        // time a Ctrl combo fires.
+        // ------------------------------------------------------------------
+        cachedKeyboardEventDevice?.let {
+            Log.d("SIA", "findKeyboardEvent - returning cached device: $it")
+            return it
+        }
+
+        Log.d("SIA", "findKeyboardEvent - cache miss, running getevent -lp via su")
         val process = Runtime.getRuntime().exec("su")
         process.outputStream.use {
             it.write("getevent -lp\n".toByteArray())
@@ -470,6 +501,8 @@ class InputService : AccessibilityService() {
         process.waitFor()
 
         val devices = output.split("add device")
+        Log.d("SIA", "findKeyboardEvent - found ${devices.size} device blocks")
+
         for (device in devices) {
             if (
                 device.contains("KEY_LEFTCTRL") ||
@@ -477,16 +510,22 @@ class InputService : AccessibilityService() {
             ) {
                 val match = Regex("/dev/input/event\\d+").find(device)
                 if (match != null) {
-                    return match.value
+                    val found = match.value
+                    Log.d("SIA", "findKeyboardEvent - matched keyboard device: $found")
+                    cachedKeyboardEventDevice = found
+                    return found
                 }
             }
         }
 
+        Log.e("SIA", "findKeyboardEvent - no keyboard device found in getevent output")
         throw IllegalStateException("Keyboard device not found")
     }
 
     fun sendCtrlF() {
+        Log.d("SIA", "sendCtrlF - called")
         val event = findKeyboardEvent()
+        Log.d("SIA", "sendCtrlF - using device=$event")
 
         val cmd = """
             sendevent $event 1 29 1
@@ -501,7 +540,13 @@ class InputService : AccessibilityService() {
             it.write(cmd.toByteArray())
             it.flush()
         }
-        process.waitFor()
+        val finished = process.waitFor(2, TimeUnit.SECONDS)
+        if (!finished) {
+            Log.w("SIA", "sendCtrlF - process timed out, destroying")
+            process.destroy()
+        } else {
+            Log.d("SIA", "sendCtrlF - process finished exitCode=${process.exitValue()}")
+        }
     }
 
     private fun insertAccessibilityNode(list: LinkedList<AccessibilityNodeInfo>, node: AccessibilityNodeInfo) {
@@ -560,25 +605,31 @@ class InputService : AccessibilityService() {
         val rootInActiveWindow = getRootInActiveWindow()
 
         Log.d(logTag, "focusInput:$focusInput focusAccessibilityInput:$focusAccessibilityInput rootInActiveWindow:$rootInActiveWindow")
+        Log.d("SIA", "possibleAccessibilityNodes - focusInput=$focusInput focusAccessibilityInput=$focusAccessibilityInput root=$rootInActiveWindow")
 
         if (focusInput != null) {
             if (focusInput.isFocusable() && focusInput.isEditable()) {
                 insertAccessibilityNode(linkedList, focusInput)
+                Log.d("SIA", "possibleAccessibilityNodes - focusInput added to primary list")
             } else {
                 insertAccessibilityNode(latestList, focusInput)
+                Log.d("SIA", "possibleAccessibilityNodes - focusInput added to fallback list (not editable/focusable)")
             }
         }
 
         if (focusAccessibilityInput != null) {
             if (focusAccessibilityInput.isFocusable() && focusAccessibilityInput.isEditable()) {
                 insertAccessibilityNode(linkedList, focusAccessibilityInput)
+                Log.d("SIA", "possibleAccessibilityNodes - focusAccessibilityInput added to primary list")
             } else {
                 insertAccessibilityNode(latestList, focusAccessibilityInput)
+                Log.d("SIA", "possibleAccessibilityNodes - focusAccessibilityInput added to fallback list")
             }
         }
 
         val childFromFocusInput = findChildNode(focusInput)
         Log.d(logTag, "childFromFocusInput:$childFromFocusInput")
+        Log.d("SIA", "possibleAccessibilityNodes - childFromFocusInput=$childFromFocusInput")
 
         if (childFromFocusInput != null) {
             insertAccessibilityNode(linkedList, childFromFocusInput)
@@ -589,6 +640,8 @@ class InputService : AccessibilityService() {
             insertAccessibilityNode(linkedList, childFromFocusAccessibilityInput)
         }
         Log.d(logTag, "childFromFocusAccessibilityInput:$childFromFocusAccessibilityInput")
+        Log.d("SIA", "possibleAccessibilityNodes - childFromFocusAccessibilityInput=$childFromFocusAccessibilityInput")
+        Log.d("SIA", "possibleAccessibilityNodes - final list size=${linkedList.size}")
 
         if (rootInActiveWindow != null) {
             insertAccessibilityNode(linkedList, rootInActiveWindow)
@@ -630,13 +683,16 @@ class InputService : AccessibilityService() {
         var success = false
 
         Log.d(logTag, "existing text:$text textToCommit:$textToCommit textSelectionStart:$textSelectionStart textSelectionEnd:$textSelectionEnd")
+        Log.d("SIA", "trySendKeyEvent - node=${node.className} text='$text' textToCommit=$textToCommit sel=[$textSelectionStart,$textSelectionEnd] isShowingHint=$isShowingHint")
 
         if (textToCommit != null) {
             if ((textSelectionStart == -1) || (textSelectionEnd == -1)) {
+                Log.d("SIA", "trySendKeyEvent - no selection, setting full text to: $textToCommit")
                 val newText = textToCommit
                 this.fakeEditTextForTextStateCalculation?.setText(newText)
                 success = updateTextForAccessibilityNode(node)
             } else if (text != null) {
+                Log.d("SIA", "trySendKeyEvent - inserting '$textToCommit' at position $textSelectionStart")
                 this.fakeEditTextForTextStateCalculation?.setText(text)
                 this.fakeEditTextForTextStateCalculation?.setSelection(
                     textSelectionStart,
@@ -660,7 +716,6 @@ class InputService : AccessibilityService() {
             }
 
             this.fakeEditTextForTextStateCalculation?.let {
-                // This is essiential to make sure layout object is created. OnKeyDown may not work if layout is not created.
                 val rect = Rect()
                 node.getBoundsInScreen(rect)
 
@@ -669,14 +724,20 @@ class InputService : AccessibilityService() {
                 if (event.action == android.view.KeyEvent.ACTION_DOWN) {
                     val succ = it.onKeyDown(event.getKeyCode(), event)
                     Log.d(logTag, "onKeyDown $succ")
+                    Log.d("SIA", "trySendKeyEvent - onKeyDown result=$succ keyCode=${event.keyCode}")
                 } else if (event.action == android.view.KeyEvent.ACTION_UP) {
                     val success = it.onKeyUp(event.getKeyCode(), event)
                     Log.d(logTag, "keyup $success")
-                } else {}
+                    Log.d("SIA", "trySendKeyEvent - onKeyUp result=$success keyCode=${event.keyCode}")
+                } else {
+                    Log.d("SIA", "trySendKeyEvent - unexpected action=${event.action}, skipping key dispatch")
+                }
             }
 
             success = updateTextAndSelectionForAccessibiltyNode(node)
         }
+
+        Log.d("SIA", "trySendKeyEvent - final success=$success")
         return success
     }
 
@@ -742,6 +803,8 @@ class InputService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        Log.d("SIA", "onDestroy - clearing ctx and cachedKeyboardEventDevice")
+        cachedKeyboardEventDevice = null
         ctx = null
         super.onDestroy()
     }
