@@ -34,6 +34,10 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import kotlin.concurrent.thread
 
+import android.provider.Settings
+import java.io.IOException
+import java.io.File
+
 
 class MainActivity : FlutterActivity() {
     companion object {
@@ -273,11 +277,89 @@ class MainActivity : FlutterActivity() {
                 "on_voice_call_closed" -> {
                     onVoiceCallClosed()
                 }
+                // KVM integration
+                SET_HEARTBEAT_REFRESH_RATE -> {
+                    mainService?.setHeartbeatRefreshRate(call.arguments  as Int)
+                    result.success(true)
+
+                }
+                GET_MAC_ADDRESS -> {
+                    result.success(getMacAddressEth())
+                }
+                GET_ANDROID_ID -> {
+                    result.success(getAndroidId())
+                }
+                GET_SERIAL_NO -> {
+                    result.success(getSerialNo())
+                }
+                GET_KVM_ID -> {
+                    result.success(getKVMId())
+                }
                 else -> {
                     result.error("-1", "No such method", null)
                 }
             }
         }
+    }
+
+    // KVM integration
+    private fun getKVMId(): String? {
+        if (isGeniatechAndroid11() || isGeniatechAndroid6()) {
+            return getSerialNo() ?: getMacAddressEth() ?: getAndroidId()
+        }
+
+        return getMacAddressEth() ?: getAndroidId()
+    }
+
+    fun getMacAddressEth(): String? {
+        return try {
+            File("/sys/class/net/eth0/address")
+                .readText()
+                .uppercase()
+                .substring(0, 17)
+        } catch (e: IOException) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private fun getAndroidId(): String? {
+        return try {
+            return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun getSerialNo(): String? {
+        return try {
+            val c = Class.forName("android.os.SystemProperties")
+            val get = c.getMethod("get", String::class.java, String::class.java )
+            val serialNo = (get.invoke(c, "ro.serialno", "")) as String
+            return serialNo
+        } catch (e: Exception) {
+            e.toString()
+        }
+
+        return try {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Build.getSerial()
+            } else {
+                 Build.SERIAL
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun isGeniatechAndroid6(): Boolean {
+        return android.os.Build.MODEL.lowercase() == ("Dex Media Player 4K Live").lowercase()
+                && android.os.Build.MANUFACTURER.lowercase() == "realtek".lowercase()
+    }
+
+    private fun isGeniatechAndroid11(): Boolean {
+        return android.os.Build.MODEL.lowercase() == ("Dex Computer").lowercase()
+                && android.os.Build.MANUFACTURER.lowercase() == "rockchip".lowercase()
     }
 
     private fun setCodecInfo() {

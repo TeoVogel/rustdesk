@@ -62,6 +62,23 @@ const val VIDEO_KEY_FRAME_RATE = 30
 
 class MainService : Service() {
 
+    // ## KVM integration
+    private var heartbeatRefreshRate = HEARTBEAT_DEFAULT_REFRESH_RATE
+    fun setHeartbeatRefreshRate(rate: Int) {
+        heartbeatRefreshRate = rate
+    }
+    private val heartbeatHandler = Handler(Looper.getMainLooper())
+    private val heartbeatRunnable = object : Runnable {
+        override fun run() {
+            Log.d(logTag, "heartbeatHandler run")
+            MainActivity.flutterMethodChannel?.invokeMethod(
+                "send_kvm_heartbeat",
+                null
+            )
+            heartbeatHandler.postDelayed(this, heartbeatRefreshRate * 1000L)
+        }
+    }
+
     @Keep
     @RequiresApi(Build.VERSION_CODES.N)
     fun rustPointerInput(kind: Int, mask: Int, x: Int, y: Int) {
@@ -251,6 +268,8 @@ class MainService : Service() {
     override fun onDestroy() {
         checkMediaPermission()
         stopService(Intent(this, FloatingWindowService::class.java))
+        // ## KVM integration
+        heartbeatHandler.removeCallbacks(heartbeatRunnable)
         super.onDestroy()
     }
 
@@ -346,6 +365,11 @@ class MainService : Service() {
                 requestMediaProjection()
             }
         }
+
+        // ## KVM integration
+        Log.d(logTag, "heartbeatHandler post")
+        heartbeatHandler.post(heartbeatRunnable)
+
         return START_NOT_STICKY // don't use sticky (auto restart), the new service (from auto restart) will lose control
     }
 

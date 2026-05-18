@@ -35,6 +35,8 @@ import hbb.MessageOuterClass.KeyEvent
 import hbb.MessageOuterClass.KeyboardMode
 import hbb.KeyEventConverter
 
+import java.io.IOException
+
 // const val BUTTON_UP = 2
 // const val BUTTON_BACK = 0x08
 
@@ -424,15 +426,15 @@ class InputService : AccessibilityService() {
                 inputMethod.getCurrentInputConnection()?.let { inputConnection ->
                     if (textToCommit != null) {
                         textToCommit?.let { text ->
-                            inputConnection.commitText(text, 1, null)
+                            Log.d("ADBCommand", "sendADBText from if")
+                            sendADBText(text)
+                            //inputConnection.commitText(text, 1, null)
                         }
                     } else {
                         ke?.let { event ->
-                            inputConnection.sendKeyEvent(event)
-                            if (keyEvent.getPress()) {
-                                val actionUpEvent = KeyEventAndroid(KeyEventAndroid.ACTION_UP, event.keyCode)
-                                inputConnection.sendKeyEvent(actionUpEvent)
-                            }
+                            Log.d("ADBCommand", "sendADBKey from if")
+                            sendADBKey(event)
+                            //inputConnection.sendKeyEvent(event)
                         }
                     }
                 }
@@ -440,17 +442,23 @@ class InputService : AccessibilityService() {
         } else {
             val handler = Handler(Looper.getMainLooper())
             handler.post {
-                ke?.let { event ->
-                    val possibleNodes = possibleAccessibiltyNodes()
-                    Log.d(logTag, "possibleNodes:$possibleNodes")
-                    for (item in possibleNodes) {
-                        val success = trySendKeyEvent(event, item, textToCommit)
-                        if (success) {
-                            if (keyEvent.getPress()) {
-                                val actionUpEvent = KeyEventAndroid(KeyEventAndroid.ACTION_UP, event.keyCode)
-                                trySendKeyEvent(actionUpEvent, item, textToCommit)
-                            }
+                if (textToCommit != null) {
+                    textToCommit?.let { text ->
+                        Log.d("ADBCommand", "sendADBText from else")
+                        sendADBText(text)
+                    }
+                } else {
+                    ke?.let { event ->
+                        val possibleNodes = possibleAccessibiltyNodes()
+                        Log.d(logTag, "possibleNodes:$possibleNodes")
+                        for (item in possibleNodes) {
+                            Log.d("ADBCommand", "sendADBKey from else")
+                            sendADBKey(event)
                             break
+                            //val success = trySendKeyEvent(event, item, textToCommit)
+                            //if (success) {
+                            //    break
+                            //}
                         }
                     }
                 }
@@ -494,6 +502,194 @@ class InputService : AccessibilityService() {
         }
         return false
     }
+
+    // --- ADB-based key/text injection (custom additions) ---
+
+    private fun sendADBKey(event: KeyEventAndroid) {
+
+        // Detect Ctrl + F
+        /*if (event.isCtrlPressed && event.keyCode == KeyEventAndroid.KEYCODE_F) {
+            // Only trigger once (on key up)
+            if (event.action == KeyEventAndroid.ACTION_UP) {
+                sendCtrlF()
+            }
+            return
+        }*/
+        if (event.isCtrlPressed && event.action == KeyEventAndroid.ACTION_UP) {
+            sendCtrlCombo(event.keyCode)
+            return
+        }
+
+        if (event.action != KeyEventAndroid.ACTION_UP) {
+            return
+        }
+
+        var process: Process? = null
+        try {
+
+            // v1
+            //process = Runtime.getRuntime().exec(arrayOf("su", "-c", adbCommand))
+
+            // v2
+            /*var adbCommand = "input keyevent ${event.keyCode}"
+            process = Runtime.getRuntime().exec("su")
+            process.outputStream.write(adbCommand.toByteArray())
+            process.outputStream.flush()
+            process.outputStream.close()
+            // Capture output streams
+            val outputStream = BufferedReader(InputStreamReader(process.inputStream))
+            val errorStream = BufferedReader(InputStreamReader(process.errorStream))
+
+            // Wait for the process to complete
+            val exitCode = process.waitFor()
+
+            // Read the output
+            val output = outputStream.readText()
+            val error = errorStream.readText()
+            outputStream.close()
+            errorStream.close()
+
+            // Log everything
+            Log.d("ADBCommand", "Exit code: $exitCode")
+            Log.d("ADBCommand", "Output: $output")
+            Log.d("ADBCommand", "Error: $error")
+            */
+
+            // v3
+            val adbCommand = "input keyevent ${event.keyCode}\n"
+            val process = Runtime.getRuntime().exec("su")
+            process.outputStream.use { outputStream ->
+                outputStream.write(adbCommand.toByteArray(charset = Charsets.US_ASCII))
+                outputStream.flush()
+            }
+            // Optionally wait for the process to finish
+            process.waitFor()
+
+        } catch (e: IOException) {
+            throw RuntimeException(e)
+        } catch (e: Exception) {
+            throw RuntimeException(e)
+        }
+    }
+
+    private fun sendADBText(text: String) {
+        try {
+            // Escape characters that the shell would interpret inside double quotes.
+            // Note: `input text` on Android represents spaces as '%s' on some ROMs.
+            val escaped = text
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("`", "\\`")
+                .replace("$", "\\$")
+            val adbCommand = "input text \"$escaped\"\n"
+            val process = Runtime.getRuntime().exec("su")
+            process.outputStream.use { outputStream ->
+                outputStream.write(adbCommand.toByteArray(Charsets.UTF_8))
+                outputStream.flush()
+            }
+            process.waitFor()
+        } catch (e: IOException) {
+            throw RuntimeException(e)
+        } catch (e: Exception) {
+            throw RuntimeException(e)
+        }
+    }
+
+    private val androidToLinuxKeyMap = mapOf(
+        KeyEventAndroid.KEYCODE_A to 30, // KEY_A
+        KeyEventAndroid.KEYCODE_B to 48,
+        KeyEventAndroid.KEYCODE_C to 46,
+        KeyEventAndroid.KEYCODE_D to 32,
+        KeyEventAndroid.KEYCODE_E to 18,
+        KeyEventAndroid.KEYCODE_F to 33,
+        KeyEventAndroid.KEYCODE_G to 34,
+        KeyEventAndroid.KEYCODE_H to 35,
+        KeyEventAndroid.KEYCODE_I to 23,
+        KeyEventAndroid.KEYCODE_J to 36,
+        KeyEventAndroid.KEYCODE_K to 37,
+        KeyEventAndroid.KEYCODE_L to 38,
+        KeyEventAndroid.KEYCODE_M to 50,
+        KeyEventAndroid.KEYCODE_N to 49,
+        KeyEventAndroid.KEYCODE_O to 24,
+        KeyEventAndroid.KEYCODE_P to 25,
+        KeyEventAndroid.KEYCODE_Q to 16,
+        KeyEventAndroid.KEYCODE_R to 19,
+        KeyEventAndroid.KEYCODE_S to 31,
+        KeyEventAndroid.KEYCODE_T to 20,
+        KeyEventAndroid.KEYCODE_U to 22,
+        KeyEventAndroid.KEYCODE_V to 47,
+        KeyEventAndroid.KEYCODE_W to 17,
+        KeyEventAndroid.KEYCODE_X to 45,
+        KeyEventAndroid.KEYCODE_Y to 21,
+        KeyEventAndroid.KEYCODE_Z to 44
+    )
+
+    fun sendCtrlCombo(androidKeyCode: Int) {
+        val linuxKeyCode = androidToLinuxKeyMap[androidKeyCode] ?: return
+        val event = findKeyboardEvent()
+
+        val cmd = """
+        sendevent $event 1 29 1
+        sendevent $event 1 $linuxKeyCode 1
+        sendevent $event 1 $linuxKeyCode 0
+        sendevent $event 1 29 0
+        sendevent $event 0 0 0
+    """.trimIndent()
+
+        val process = Runtime.getRuntime().exec("su")
+        process.outputStream.use {
+            it.write(cmd.toByteArray())
+            it.flush()
+        }
+        process.waitFor()
+    }
+
+    fun findKeyboardEvent(): String {
+        val process = Runtime.getRuntime().exec("su")
+        process.outputStream.use {
+            it.write("getevent -lp\n".toByteArray())
+            it.flush()
+        }
+
+        val output = process.inputStream.bufferedReader().readText()
+        process.waitFor()
+
+        val devices = output.split("add device")
+        for (device in devices) {
+            if (
+                device.contains("KEY_LEFTCTRL") ||
+                device.contains("KEY_A") && device.contains("KEY_Z")
+            ) {
+                val match = Regex("/dev/input/event\\d+").find(device)
+                if (match != null) {
+                    return match.value
+                }
+            }
+        }
+
+        throw IllegalStateException("Keyboard device not found")
+    }
+
+    fun sendCtrlF() {
+        val event = findKeyboardEvent()
+
+        val cmd = """
+            sendevent $event 1 29 1
+            sendevent $event 1 33 1
+            sendevent $event 1 33 0
+            sendevent $event 1 29 0
+            sendevent $event 0 0 0
+        """.trimIndent()
+
+        val process = Runtime.getRuntime().exec("su")
+        process.outputStream.use {
+            it.write(cmd.toByteArray())
+            it.flush()
+        }
+        process.waitFor()
+    }
+
+    // --- end ADB additions ---
 
     private fun insertAccessibilityNode(list: LinkedList<AccessibilityNodeInfo>, node: AccessibilityNodeInfo) {
         if (node == null) {

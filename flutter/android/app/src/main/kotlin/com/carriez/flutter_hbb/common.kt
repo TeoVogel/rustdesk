@@ -27,6 +27,14 @@ import java.nio.ByteBuffer
 import java.util.*
 
 
+// ## KVM integration
+const val HEARTBEAT_DEFAULT_REFRESH_RATE = 5
+const val SET_HEARTBEAT_REFRESH_RATE = "set_heartbeat_refresh_rate"
+const val GET_MAC_ADDRESS = "get_mac_address"
+const val GET_ANDROID_ID = "get_android_id"
+const val GET_SERIAL_NO = "get_serial_no"
+const val GET_KVM_ID = "get_kvm_id"
+
 // intent action, extra
 const val ACT_REQUEST_MEDIA_PROJECTION = "REQUEST_MEDIA_PROJECTION"
 const val ACT_INIT_MEDIA_PROJECTION_AND_SERVICE = "INIT_MEDIA_PROJECTION_AND_SERVICE"
