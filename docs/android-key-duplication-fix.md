@@ -143,17 +143,69 @@ y confirmar que llega `aurora` (sin letras repetidas).
 
 ---
 
-## Caveats / trabajo futuro (fuera del alcance de este fix)
+## Fix relacionado: Ctrl + letra ya no teclea la letra
 
-- **Ctrl + letra también teclea la letra.** En el key-down, el `KeyEvent` de,
-  p. ej., `Ctrl+F` trae `chr = 'f'`, por lo que `sendADBText("f")` escribe `f`
-  antes de que el key-up dispare `sendCtrlCombo`. Este es un problema **distinto**
-  y preexistente; no lo toca este fix. Si se quiere resolver, habría que evitar
-  el `input text` cuando hay modificadores no-shift activos.
+### El problema
+
+Un combo tipo **Ctrl+F** generaba **dos** efectos a la vez:
+
+| Evento | Qué hacía | Efecto |
+|--------|-----------|--------|
+| key-down (`chr='f'`, ctrl) | `sendADBText("f")` → `input text "f"` | escribía `f` ❌ |
+| key-up (`chr='f'`, ctrl)   | `sendCtrlCombo(KEYCODE_F)` → `sendevent` | disparaba el atajo Ctrl+F ✅ |
+
+Es decir, el atajo funcionaba pero **además se colaba la letra** en el campo.
+`sendCtrlCombo` (vía `sendevent`, teclado virtual a nivel kernel) solo mapea A–Z
+(`androidToLinuxKeyMap`); para otras teclas hace `return` (no-op), pero la letra
+igual se tecleaba.
+
+### La solución
+
+No commitear el carácter como texto cuando hay un **modificador no-shift**
+(Ctrl/Alt/Meta) activo — eso es un atajo, no escritura. Shift/CapsLock/NumLock
+**no** cuentan (afectan el carácter, no son atajos).
+
+```kotlin
+// helper
+private fun hasNonShiftModifier(keyEvent: KeyEvent): Boolean {
+    return keyEvent.getModifiersList().any { modifier ->
+        when (modifier) {
+            ControlKey.Control, ControlKey.RControl,
+            ControlKey.Alt, ControlKey.RAlt,
+            ControlKey.Meta -> true
+            else -> false
+        }
+    }
+}
+
+// en la rama Legacy de onKeyEvent:
+if (keyEvent.hasChr() && (keyEvent.getDown() || keyEvent.getPress())
+        && !hasNonShiftModifier(keyEvent)) {
+    textToCommit = String(Character.toChars(keyEvent.getChr()))
+}
+```
+
+Traza de Ctrl+F después del fix:
+
+| Evento | `textToCommit` | Rama | Efecto |
+|--------|:--------------:|------|--------|
+| **down** | `null` (bloqueado por el modificador) | `sendADBKey(down)` → `action != UP` → return | nada |
+| **up**   | `null` | `sendADBKey(up)` → `isCtrlPressed` → `sendCtrlCombo(F)` | dispara **solo** el atajo ✅ |
+
+Requiere el import `import hbb.MessageOuterClass.ControlKey`.
+
+---
+
+## Caveats / trabajo futuro (fuera del alcance de estos fixes)
+
 - La inyección por `su` + shell (`input text` / `input keyevent` / `sendevent`)
   depende de root y es sensible a timing. A mediano plazo conviene evaluar volver
   al camino estándar (`commitText` / accesibilidad) del upstream, que no requiere
   root.
+- `sendCtrlCombo` solo mapea **A–Z**. Combos como Ctrl+1, Ctrl+`,` etc. no se
+  inyectan (hace `return`). Con el fix ya **no** teclean la letra, pero tampoco
+  ejecutan el atajo — quedan sin efecto. Ampliar `androidToLinuxKeyMap` si hace
+  falta.
 
 ---
 

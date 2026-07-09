@@ -33,6 +33,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import hbb.MessageOuterClass.KeyEvent
 import hbb.MessageOuterClass.KeyboardMode
+import hbb.MessageOuterClass.ControlKey
 import hbb.KeyEventConverter
 
 import java.io.IOException
@@ -397,7 +398,11 @@ class InputService : AccessibilityService() {
         if (keyEvent.hasSeq()) {
             textToCommit = keyEvent.getSeq()
         } else if (keyboardMode == KeyboardMode.Legacy) {
-            if (keyEvent.hasChr() && (keyEvent.getDown() || keyEvent.getPress())) {
+            // Do NOT commit the character as text when a non-shift modifier
+            // (Ctrl/Alt/Meta) is held: it's a shortcut (e.g. Ctrl+F), handled on
+            // key-up by sendCtrlCombo(). Committing here would ALSO type the letter
+            // (e.g. Ctrl+F would insert "f" and fire the shortcut).
+            if (keyEvent.hasChr() && (keyEvent.getDown() || keyEvent.getPress()) && !hasNonShiftModifier(keyEvent)) {
                 val chr = keyEvent.getChr()
                 if (chr != null) {
                     textToCommit = String(Character.toChars(chr))
@@ -504,6 +509,20 @@ class InputService : AccessibilityService() {
     }
 
     // --- ADB-based key/text injection (custom additions) ---
+
+    // True if the key event carries a non-shift modifier (Ctrl/Alt/Meta), i.e. a
+    // keyboard shortcut. Shift/CapsLock/NumLock are NOT shortcuts (they affect the
+    // typed character), so they don't count.
+    private fun hasNonShiftModifier(keyEvent: KeyEvent): Boolean {
+        return keyEvent.getModifiersList().any { modifier ->
+            when (modifier) {
+                ControlKey.Control, ControlKey.RControl,
+                ControlKey.Alt, ControlKey.RAlt,
+                ControlKey.Meta -> true
+                else -> false
+            }
+        }
+    }
 
     private fun sendADBKey(event: KeyEventAndroid) {
 
