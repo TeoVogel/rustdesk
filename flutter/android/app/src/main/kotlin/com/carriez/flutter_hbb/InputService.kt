@@ -524,6 +524,14 @@ class InputService : AccessibilityService() {
             return
         }
 
+        // Printable characters are already injected on key-down via `input text`
+        // (see sendADBText). Re-injecting them here as `input keyevent` would type
+        // the character a second time, causing duplication (e.g. "aurora" -> "aurooraa").
+        // Only forward non-printable keys (Enter, Backspace, arrows, Tab, ...) here.
+        if (event.unicodeChar != 0) {
+            return
+        }
+
         var process: Process? = null
         try {
 
