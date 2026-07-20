@@ -422,21 +422,18 @@ class InputService : AccessibilityService() {
         }
 
         if (Build.VERSION.SDK_INT >= 33) {
-            getInputMethod()?.let { inputMethod ->
-                inputMethod.getCurrentInputConnection()?.let { inputConnection ->
-                    if (textToCommit != null) {
-                        textToCommit?.let { text ->
-                            Log.d("ADBCommand", "sendADBText from if")
-                            sendADBText(text)
-                            //inputConnection.commitText(text, 1, null)
-                        }
-                    } else {
-                        ke?.let { event ->
-                            Log.d("ADBCommand", "sendADBKey from if")
-                            sendADBKey(event)
-                            //inputConnection.sendKeyEvent(event)
-                        }
-                    }
+            // Dispatch via ADB unconditionally: no longer gated on an active
+            // accessibility IME connection (getInputMethod()/getCurrentInputConnection()),
+            // which was the last native-Android dependency in this path.
+            if (textToCommit != null) {
+                textToCommit?.let { text ->
+                    Log.d("ADBCommand", "sendADBText from if")
+                    sendADBText(text)
+                }
+            } else {
+                ke?.let { event ->
+                    Log.d("ADBCommand", "sendADBKey from if")
+                    sendADBKey(event)
                 }
             }
         } else {
