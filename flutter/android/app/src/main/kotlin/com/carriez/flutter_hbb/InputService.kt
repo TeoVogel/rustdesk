@@ -421,6 +421,22 @@ class InputService : AccessibilityService() {
             }
         }
 
+        // Legacy mode sends a down event and an up event per keystroke; the down
+        // event already commits the character via `input text`. Unlike
+        // InputConnection.sendKeyEvent(), where a lone ACTION_UP is a no-op,
+        // `input keyevent` synthesizes a full press, so the up event would type
+        // the character a second time.
+        // Legacy is the usual mode here, since is_keyboard_mode_supported() in
+        // src/common.rs rejects Map mode for Android peers. Translate leaves
+        // textToCommit null and is already covered by the ACTION_UP guard in
+        // sendADBKey.
+        // Must stay below the volume/power handlers, which act on the up event.
+        if (keyboardMode == KeyboardMode.Legacy && keyEvent.hasChr() &&
+            !keyEvent.getDown() && !keyEvent.getPress()) {
+            Log.d(logTag, "skipping legacy key-up, already committed on key-down")
+            return
+        }
+
         if (Build.VERSION.SDK_INT >= 33) {
             // Dispatch via ADB unconditionally: no longer gated on an active
             // accessibility IME connection (getInputMethod()/getCurrentInputConnection()),
