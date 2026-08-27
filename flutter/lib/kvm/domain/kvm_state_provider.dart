@@ -4,10 +4,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/kvm/constants.dart';
 import 'package:flutter_hbb/kvm/data/kvm_api.dart';
 import 'package:flutter_hbb/kvm/data/kvm_session_datasource.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_device.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
+import 'package:flutter_hbb/kvm/domain/models/kvm_server_config.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_session.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
 import 'package:flutter_hbb/kvm/kvm_utils.dart';
@@ -22,13 +24,13 @@ class KVMStateProvider with ChangeNotifier {
         if (refreshToken != null && deviceId != null) {
         try {
           KVMSession session = await _apiRequest(() {
-              return KVMApi.refreshToken(
+              return api.refreshToken(
                 deviceId.toString(),
                 refreshToken,
               );
             });
           KVMDevice? device = await _apiRequest(() {
-              return KVMApi.getDevice(
+              return api.getDevice(
                 deviceId,
                 authToken: session.authToken,
               );
@@ -51,6 +53,9 @@ class KVMStateProvider with ChangeNotifier {
 
   KVMSession? session;
   KVMDevice? device;
+  KVMServerModel serverConfig = kvmServers.last;
+
+  KVMApi get api => KVMApi(baseUrl: serverConfig.baseUrl);
 
   String? get authToken => session?.authToken;
   int? get registeredDeviceId => device?.id;
@@ -115,7 +120,7 @@ class KVMStateProvider with ChangeNotifier {
 
   Future<KVMDevice?> login(String email, String password) async {
     return _apiRequest(() async {
-      final (session, device) = await KVMApi.login(
+      final (session, device) = await api.login(
         email,
         password,
         await KVMUtils.getSerialNO(),
@@ -128,7 +133,7 @@ class KVMStateProvider with ChangeNotifier {
 
   Future<Iterable<KVMTenant>> fetchTenants() async {
     return _apiRequest(() {
-      return KVMApi.getTenants(authToken: authToken);
+      return api.getTenants(authToken: authToken);
     });
   }
 
@@ -138,7 +143,7 @@ class KVMStateProvider with ChangeNotifier {
       return Future.error("El nombre no puede ser vacío");
     }
     return _apiRequest(() async {
-      final device = await KVMApi.registerDevice(
+      final device = await api.registerDevice(
         folder,
         trimmedDeviceName,
         await KVMUtils.getSerialNO(),
@@ -161,8 +166,9 @@ class KVMStateProvider with ChangeNotifier {
     return ServerConfig.fromOptions(options);
   }
 
-  Future<bool> setRustdeskServerConfig(ServerConfig config) async {
-    return await setServerConfig(null, null, config);
+  Future<bool> setRustdeskServerConfig(KVMServerModel serverConfig) async {
+    this.serverConfig = serverConfig;
+    return await setServerConfig(null, null, serverConfig.config);
   }
   
 }

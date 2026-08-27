@@ -1,21 +1,25 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_hbb/kvm/constants.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_device.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_session.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
 import 'package:http/http.dart' as http;
 
-abstract class KVMApi {
-  static String getKVMApiUrl(String endpoint) => "$kvmApi/$endpoint";
+class KVMApi {
 
-  static Map<String, String> getKVMHttpHeaders(String? authToken) {
+  KVMApi({required this.baseUrl});
+
+  final String baseUrl;
+
+  String getKVMApiUrl(String endpoint) => "$baseUrl/api/$endpoint";
+
+  Map<String, String> getKVMHttpHeaders(String? authToken) {
     return {'Authorization': 'Bearer $authToken'};
   }
 
-  static Future<(KVMSession, KVMDevice?)> login(
+  Future<(KVMSession, KVMDevice?)> login(
       String username, String password, String serialNO) async {
     final endpoint = "auth/token?serial_number=$serialNO";
     try {
@@ -43,7 +47,7 @@ abstract class KVMApi {
     }
   }
 
-  static Future<KVMSession> refreshToken(
+  Future<KVMSession> refreshToken(
       String deviceId, String refreshToken) async {
     final endpoint = "auth/device/$deviceId/login";
     try {
@@ -69,7 +73,7 @@ abstract class KVMApi {
     }
   }
 
-  static Future<Iterable<KVMTenant>> getTenants({String? authToken}) async {
+  Future<Iterable<KVMTenant>> getTenants({String? authToken}) async {
     final endpoint = "tenants/";
     try {
       var headers = getKVMHttpHeaders(authToken);
@@ -98,7 +102,7 @@ abstract class KVMApi {
     }
   }
 
-  static Future<Iterable<KVMFolder>> getFolders(int tenantId,
+  Future<Iterable<KVMFolder>> getFolders(int tenantId,
       {String? authToken}) async {
     final endpoint = "folders/";
     try {
@@ -128,7 +132,7 @@ abstract class KVMApi {
     }
   }
 
-  static Future<KVMDevice> registerDevice(
+  Future<KVMDevice> registerDevice(
     KVMFolder folder,
     String deviceName,
     String serialNO, {
@@ -182,7 +186,7 @@ abstract class KVMApi {
     }
   }
 
-  static Future<KVMDevice?> getDevice(
+  Future<KVMDevice?> getDevice(
     int? deviceId, {
     String? authToken,
   }) async {
@@ -213,7 +217,7 @@ abstract class KVMApi {
     }
   }
 
-  static Future<int?> heartbeat(
+  Future<int?> heartbeat(
     int deviceId, {
     String? rustId,
     String? rustPass,

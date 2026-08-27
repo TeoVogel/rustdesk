@@ -1,7 +1,6 @@
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/kvm/constants.dart';
-import 'package:flutter_hbb/kvm/data/kvm_server_configs.dart';
 import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_server_config.dart';
 import 'package:provider/provider.dart';
@@ -251,7 +250,7 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
   void _onServerSelected(KVMServerModel server) async {
     final result = await context
         .read<KVMStateProvider>()
-        .setRustdeskServerConfig(server.config);
+        .setRustdeskServerConfig(server);
     debugPrint("setRustdeskServerConfig: $result");
   }
 }

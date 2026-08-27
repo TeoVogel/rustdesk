@@ -55,43 +55,43 @@ class _KVMFolderPickerState extends State<KVMFolderPicker> {
         builder: (context, _) {
           final selectedFolder = widget.stepRegisterDevice.selectedFolder;
 
-      return Padding(
-        padding: EdgeInsets.only(left: isRoot ? 0 : 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              color: folder == selectedFolder
-                  ? Theme.of(context).colorScheme.primary.withOpacity(.1)
-                  : null,
-              child: InkWell(
-                onTap: () {
+          return Padding(
+            padding: EdgeInsets.only(left: isRoot ? 0 : 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  color: folder == selectedFolder
+                      ? Theme.of(context).colorScheme.primary.withOpacity(.1)
+                      : null,
+                  child: InkWell(
+                    onTap: () {
                       widget.stepRegisterDevice.setSelectedFolder(folder);
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Row(
-                    children: [
-                      Radio(
-                          value: folder,
-                          groupValue: selectedFolder,
-                          onChanged: (value) {
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Row(
+                        children: [
+                          Radio(
+                              value: folder,
+                              groupValue: selectedFolder,
+                              onChanged: (value) {
                                 widget.stepRegisterDevice
                                     .setSelectedFolder(folder);
-                          }),
-                      Text(folder.toString()),
-                    ],
+                              }),
+                          Text(folder.toString()),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                ...folder.subfolders.map(
+                  (subfolder) => getFolderWidget(subfolder),
+                )
+              ],
             ),
-            ...folder.subfolders.map(
-              (subfolder) => getFolderWidget(subfolder),
-            )
-          ],
-        ),
-      );
-    });
+          );
+        });
   }
 
   Future<Iterable<KVMFolder>?> fetchFolders() async {
@@ -99,10 +99,11 @@ class _KVMFolderPickerState extends State<KVMFolderPicker> {
     if (tenantId == null) {
       return [];
     }
+    final kvmState = context.read<KVMStateProvider>();
     try {
-      return await KVMApi.getFolders(
+      return await kvmState.api.getFolders(
         tenantId,
-        authToken: context.read<KVMStateProvider>().authToken,
+        authToken: kvmState.authToken,
       );
     } on KVMApiError catch (error) {
       setState(() {
@@ -112,7 +113,7 @@ class _KVMFolderPickerState extends State<KVMFolderPicker> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error.message)));
     } on KVMAuthError catch (error) {
-      context.read<KVMStateProvider>().onUserSessionExpired();
+      kvmState.onUserSessionExpired();
       Navigator.pop(context);
 
       ScaffoldMessenger.of(context)

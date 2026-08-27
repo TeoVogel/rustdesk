@@ -1,5 +1,6 @@
-//const kvmApi = "your-kvm-api";
-const kvmApi = "https://kvm.jmbajo.com/api";
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/kvm/domain/models/kvm_server_config.dart';
 
 const defaultHeartbeatS = 60;
 
@@ -12,5 +13,27 @@ const String? relayServer = null;
 const String? apiServer = null;
 const String? key = null;
 
-const int buildNumber = 7;
-const String buildDate = "26/03/2026";
+final List<KVMServerModel> kvmServers = [
+  KVMServerModel(
+    name: "dexmanager",
+    config:  ServerConfig(
+      idServer: dotenv.env['DEXMANAGER_SV_S'],
+      relayServer: dotenv.env['DEXMANAGER_SV_R'],
+      key: dotenv.env['DEXMANAGER_SV_KEY'],
+    ),
+    baseUrl: dotenv.env['DEXMANAGER_BASE_URL'] ?? '',
+  ),
+  KVMServerModel(
+    name: "jmbajo",
+    config:  ServerConfig(
+      idServer: dotenv.env['JMBAJO_SV_S'],
+      relayServer: dotenv.env['JMBAJO_SV_R'],
+      key: dotenv.env['JMBAJO_SV_KEY'],
+    ),
+    baseUrl: dotenv.env['JMBAJO_BASE_URL'] ?? '',
+  ),
+];
+
+const int buildNumber = 10;
+const String buildDate = "26/10/2026";
+
