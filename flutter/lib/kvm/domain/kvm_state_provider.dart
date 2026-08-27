@@ -168,6 +168,7 @@ class KVMStateProvider with ChangeNotifier {
 
   Future<bool> setRustdeskServerConfig(KVMServerModel serverConfig) async {
     this.serverConfig = serverConfig;
+    notifyListeners();
     return await setServerConfig(null, null, serverConfig.config);
   }
   

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_home_page.dart';
+import 'package:flutter_hbb/kvm/domain/kvm_state_provider.dart';
+import 'package:flutter_hbb/kvm/kvm_service.dart';
 import 'package:flutter_hbb/mobile/widgets/dialog.dart';
 import 'package:flutter_hbb/models/chat_model.dart';
 import 'package:get/get.dart';
@@ -862,7 +864,8 @@ class ClientInfo extends StatelessWidget {
   }
 }
 
-void androidChannelInit() {
+// KVM integration
+void androidChannelInit(KVMStateProvider? kvmState) {
   gFFI.setMethodCallHandler((method, arguments) {
     debugPrint("flutter got android msg,$method,$arguments");
     try {
@@ -909,6 +912,15 @@ void androidChannelInit() {
             if (gFFI.serverModel.isStart) {
               gFFI.serverModel.stopService();
             }
+            break;
+          }
+        // KVM integration
+        case "send_kvm_heartbeat":
+          {
+            if (kvmState != null){
+            KVMService().checkCredentialsAndSendHeartBeat(
+              kvmState.api
+            );}
             break;
           }
       }

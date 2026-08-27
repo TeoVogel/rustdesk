@@ -53,7 +53,7 @@ class KVMService {
     return await platformFFI.invokeMethod(AndroidKVMChannel.kGetKVMId);
   }
 
-  void checkCredentialsAndSendHeartBeat() {
+  void checkCredentialsAndSendHeartBeat(KVMApi api) {
     if (model.isStart) {
       final currentRustId = model.serverId.value.text.removeAllWhitespace;
       final currentRustPass = model.serverPasswd.value.text;
@@ -73,16 +73,16 @@ class KVMService {
           ));
 
       if (shouldSendHeartBeat) {
-        sendHeartBeat(sentRustId, sentRustPass);
+        sendHeartBeat(sentRustId, sentRustPass, api);
       }
     } else {
       debugPrint("KVM not seted up");
     }
   }
 
-  void sendHeartBeat(String? sentRustId, String? sentRustPass) async {
+  void sendHeartBeat(String? sentRustId, String? sentRustPass, KVMApi api) async {
     try {
-      final heartbeatS = await KVMApi.heartbeat(
+      final heartbeatS = await api.heartbeat(
         kvmState.registeredDeviceId!,
         authToken: kvmState.authToken,
         rustId: sentRustId,

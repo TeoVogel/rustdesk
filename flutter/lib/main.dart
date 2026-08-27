@@ -187,7 +187,7 @@ void runMainApp(bool startService) async {
 void runMobileApp() async {
   await initEnv(kAppTypeMain);
   checkUpdate();
-  if (isAndroid) androidChannelInit();
+  if (isAndroid) androidChannelInit(null);
   if (isAndroid) platformFFI.syncAndroidServiceAppDirConfigPath();
   draggablePositions.load();
   await Future.wait([gFFI.abModel.loadCache(), gFFI.groupModel.loadCache()]);
@@ -446,6 +446,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
     // ## KVM integration
     kvmState = KVMStateProvider();
     KVMService().start(kvmState);
+    if (isAndroid) androidChannelInit(kvmState);
 
     WidgetsBinding.instance.window.onPlatformBrightnessChanged = () {
       final userPreference = MyTheme.getThemeModePreference();

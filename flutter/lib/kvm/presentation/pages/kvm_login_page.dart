@@ -17,8 +17,6 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
   final passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  KVMServerModel? selectedServer;
-
   String? signInError;
 
   bool isLogingIn = false;
@@ -126,7 +124,7 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
                         alignment: Alignment.bottomRight,
                         child: ElevatedButton(
                           onPressed: () {
-                            if (_formKey.currentState!.validate()) {
+                            if (!isLogingIn && _formKey.currentState!.validate()) {
                               _loginPressed();
                             }
                           },
@@ -194,12 +192,8 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
                                 contentPadding: EdgeInsets.zero,
                                 title: Text(server.name),
                                 value: server,
-                                groupValue: selectedServer,
+                                groupValue: context.read<KVMStateProvider>().serverConfig,
                                 onChanged: (value) {
-                                  setState(() {
-                                    selectedServer = value;
-                                  });
-
                                   _onServerSelected(value!);
                                 },
                               );
