@@ -13,23 +13,37 @@ class KVMApi {
 
   final String baseUrl;
 
-  String getKVMApiUrl(String endpoint) => "$baseUrl/api/$endpoint";
+  String getKVMApiUrl(String endpoint) => "$baseUrl/$endpoint";
+
+  void _logRequest(String method, String url, Map<String, String> headers,
+      [Object? body]) {
+    debugPrint("KVMApi -> $method $url");
+    debugPrint("KVMApi -> headers: $headers");
+    debugPrint("KVMApi -> body: ${body ?? "<none>"}");
+  }
 
   Map<String, String> getKVMHttpHeaders(String? authToken) {
-    return {'Authorization': 'Bearer $authToken'};
+    return {
+      'Authorization': 'Bearer $authToken',
+      'accept': 'application/json',
+    };
   }
 
   Future<(KVMSession, KVMDevice?)> login(
       String username, String password, String serialNO) async {
     final endpoint = "auth/token?serial_number=$serialNO";
     try {
-      Map<String, String> headers = {};
+      Map<String, String> headers = {'accept': 'application/json'};
       headers['Content-Type'] = "application/x-www-form-urlencoded";
+      final url = getKVMApiUrl(endpoint);
+      final body = {"username": username, "password": password};
+      _logRequest("POST", url, headers, body);
       final response = await http.post(
-        Uri.parse(getKVMApiUrl(endpoint)),
+        Uri.parse(url),
         headers: headers,
-        body: {"username": username, "password": password},
+        body: body,
       );
+      //print(response.body);
 
       Map<String, dynamic> json = jsonDecode(response.body);
       if (response.statusCode == 200 && json.containsKey('access_token')) {
@@ -51,14 +65,17 @@ class KVMApi {
       String deviceId, String refreshToken) async {
     final endpoint = "auth/device/$deviceId/login";
     try {
-      Map<String, String> headers = {};
+      Map<String, String> headers = {'accept': 'application/json'};
       headers['Content-Type'] = "application/json";
+      final url = getKVMApiUrl(endpoint);
+      final body = jsonEncode({
+        "refresh_token": refreshToken,
+      });
+      _logRequest("POST", url, headers, body);
       final response = await http.post(
-        Uri.parse(getKVMApiUrl(endpoint)),
+        Uri.parse(url),
         headers: headers,
-        body: jsonEncode({
-          "refresh_token": refreshToken,
-        }),
+        body: body,
       );
 
       Map<String, dynamic> json = jsonDecode(response.body);
@@ -78,8 +95,10 @@ class KVMApi {
     try {
       var headers = getKVMHttpHeaders(authToken);
       headers['Content-Type'] = "application/x-www-form-urlencoded";
+      final url = getKVMApiUrl(endpoint);
+      _logRequest("GET", url, headers);
       final response = await http.get(
-        Uri.parse(getKVMApiUrl(endpoint)),
+        Uri.parse(url),
         headers: headers,
       );
 
@@ -108,8 +127,10 @@ class KVMApi {
     try {
       var headers = getKVMHttpHeaders(authToken);
       headers['Content-Type'] = "application/x-www-form-urlencoded";
+      final url = "${getKVMApiUrl(endpoint)}?tenant_id=$tenantId";
+      _logRequest("GET", url, headers);
       final response = await http.get(
-        Uri.parse("${getKVMApiUrl(endpoint)}?tenant_id=$tenantId"),
+        Uri.parse(url),
         headers: headers,
       );
 
@@ -147,30 +168,35 @@ class KVMApi {
     try {
       var headers = getKVMHttpHeaders(authToken);
       headers['Content-Type'] = "application/json";
-      final response = await http.post(Uri.parse(getKVMApiUrl(endpoint)),
-          headers: headers,
-          body: jsonEncode(
-            {
-              "name": deviceName,
-              "ip_address": "",
-              "mac_address": "",
-              "id_rust": "",
-              "pass_rust": "",
-              "last_screenshot_path": "",
-              "serial_number": serialNO,
-              "folder_id": folder.id,
-              "SO_name": soName,
-              "SO_version": soVersion,
-              "time_zone": timeZone,
-              "local_ips": localIps,
-              "MAC_adresses": macAddress,
-              "os_kernel_version": "",
-              "vendor_name": "",
-              "vendor_model": "",
-              "vendor_cores": 0,
-              "vendor_ram_gb": 0
-            },
-          ));
+      final url = getKVMApiUrl(endpoint);
+      final body = jsonEncode(
+        {
+          "name": deviceName,
+          "ip_address": "",
+          "mac_address": "",
+          "id_rust": "",
+          "pass_rust": "",
+          "last_screenshot_path": "",
+          "serial_number": serialNO,
+          "folder_id": folder.id,
+          "SO_name": soName,
+          "SO_version": soVersion,
+          "time_zone": timeZone,
+          "local_ips": localIps,
+          "MAC_adresses": macAddress,
+          "os_kernel_version": "",
+          "vendor_name": "",
+          "vendor_model": "",
+          "vendor_cores": 0,
+          "vendor_ram_gb": 0
+        },
+      );
+      _logRequest("POST", url, headers, body);
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      );
 
       Map<String, dynamic> json = jsonDecode(response.body);
       if (response.statusCode == 200 && json.containsKey('id')) {
@@ -198,8 +224,10 @@ class KVMApi {
     try {
       var headers = getKVMHttpHeaders(authToken);
       headers['Content-Type'] = "application/json";
+      final url = getKVMApiUrl(endpoint);
+      _logRequest("GET", url, headers);
       final response = await http.get(
-        Uri.parse(getKVMApiUrl(endpoint)),
+        Uri.parse(url),
         headers: headers,
       );
 
@@ -230,22 +258,25 @@ class KVMApi {
       // test sending always null on header auth token
       var headers = getKVMHttpHeaders(null);
       headers['Content-Type'] = "application/json";
+      final url = getKVMApiUrl(endpoint);
+      final body = rustId != null || rustPass != null
+          ? jsonEncode(
+              {
+                "id_rust": rustId,
+                "pass_rust": rustPass,
+                "MEM_load_mb": memLoadMb,
+              },
+            )
+          : jsonEncode(
+              {
+                "MEM_load_mb": memLoadMb,
+              },
+            );
+      _logRequest("POST", url, headers, body);
       final response = await http.post(
-        Uri.parse(getKVMApiUrl(endpoint)),
+        Uri.parse(url),
         headers: headers,
-        body: rustId != null || rustPass != null
-            ? jsonEncode(
-                {
-                  "id_rust": rustId,
-                  "pass_rust": rustPass,
-                  "MEM_load_mb": memLoadMb,
-                },
-              )
-            : jsonEncode(
-                {
-                  "MEM_load_mb": memLoadMb,
-                },
-              ),
+        body: body,
       );
 
       Map<String, dynamic> json = jsonDecode(response.body);

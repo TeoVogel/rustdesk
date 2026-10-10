@@ -55,7 +55,7 @@ class KVMStateProvider with ChangeNotifier {
   KVMDevice? device;
   KVMServerModel serverConfig = kvmServers.last;
 
-  KVMApi get api => KVMApi(baseUrl: serverConfig.baseUrl);
+  KVMApi get api => KVMApi(baseUrl: serverConfig.resolvedBaseUrl);
 
   String? get authToken => session?.authToken;
   int? get registeredDeviceId => device?.id;
@@ -171,5 +171,13 @@ class KVMStateProvider with ChangeNotifier {
     notifyListeners();
     return await setServerConfig(null, null, serverConfig.config);
   }
-  
+
+  /// Mutates the currently selected [serverConfig] (e.g. its `useHttps` flag or
+  /// `baseUrlResolutionOverride`) and notifies listeners so the resolved
+  /// [api] base url picks up the change.
+  void updateServerConfig(void Function(KVMServerModel server) update) {
+    update(serverConfig);
+    notifyListeners();
+  }
+
 }

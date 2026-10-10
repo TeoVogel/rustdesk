@@ -34,6 +34,6 @@ final List<KVMServerModel> kvmServers = [
   ),
 ];
 
-const int buildNumber = 11;
-const String buildDate = "27/10/2026";
+const int buildNumber = 13;
+const String buildDate = "10/09/2026";
 
