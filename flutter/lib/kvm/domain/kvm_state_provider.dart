@@ -19,30 +19,10 @@ import 'package:flutter_hbb/models/platform_model.dart';
 class KVMStateProvider with ChangeNotifier {
 
   KVMStateProvider() {
-    kvmSessionDatasource.getRefreshToken().then((refreshToken) async {
-        int? deviceId = await kvmSessionDatasource.getDeviceId();
-        if (refreshToken != null && deviceId != null) {
-        try {
-          KVMSession session = await _apiRequest(() {
-              return api.refreshToken(
-                deviceId.toString(),
-                refreshToken,
-              );
-            });
-          KVMDevice? device = await _apiRequest(() {
-              return api.getDevice(
-                deviceId,
-                authToken: session.authToken,
-              );
-          });
-          onSessionRestored(session, device);
-          } on Exception catch (_) {}
-        } else {
-          onUserSessionExpired();
-        }
-      },
-    );
+    restoreSession();
   }
+
+  static const _restoreTimeout = Duration(seconds: 20);
 
   final kvmSessionDatasource = KVMSessionDatasource();
 
@@ -61,6 +41,67 @@ class KVMStateProvider with ChangeNotifier {
   int? get registeredDeviceId => device?.id;
 
   bool get isKVMSetedup => session != null && device != null;
+
+  /// Runs on every cold start (including when Android kills the process while
+  /// the user is in the system settings granting permissions). It must always
+  /// leave [nextStepState] out of [KVMStepInitializing], otherwise the
+  /// onboarding screen shows a spinner forever.
+  Future<void> restoreSession() async {
+    if (nextStepState is! KVMStepInitializing) {
+      nextStepState = KVMStepInitializing();
+      notifyListeners();
+    }
+    try {
+      // The server must be restored first so the refresh token is sent to the
+      // backend that issued it.
+      await _restoreServerConfig();
+
+      final refreshToken = await kvmSessionDatasource.getRefreshToken();
+      final deviceId = await kvmSessionDatasource.getDeviceId();
+      if (refreshToken == null || deviceId == null) {
+        onUserSessionExpired();
+        return;
+      }
+
+      final session = await api
+          .refreshToken(deviceId.toString(), refreshToken)
+          .timeout(_restoreTimeout);
+      final device = await api
+          .getDevice(deviceId, authToken: session.authToken)
+          .timeout(_restoreTimeout);
+      onSessionRestored(session, device);
+    } on KVMAuthError catch (_) {
+      onUserSessionExpired();
+    } catch (e) {
+      debugPrint("KVM session restore failed: $e");
+      nextStepState = KVMStepRestoreFailed(
+        e is KVMApiError ? e.message : e.toString(),
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<void> _restoreServerConfig() async {
+    final serverName = await kvmSessionDatasource.getServerName();
+    final server = kvmServers.firstWhere(
+      (server) => server.name == serverName,
+      orElse: () => serverConfig,
+    );
+    final useHttps = await kvmSessionDatasource.getServerUseHttps();
+    if (useHttps != null) {
+      server.useHttps = useHttps;
+    }
+    server.baseUrlResolutionOverride =
+        await kvmSessionDatasource.getServerBaseUrlOverride();
+    serverConfig = server;
+  }
+
+  void _storeServerConfig() {
+    kvmSessionDatasource.storeServerName(serverConfig.name);
+    kvmSessionDatasource.storeServerUseHttps(serverConfig.useHttps);
+    kvmSessionDatasource
+        .storeServerBaseUrlOverride(serverConfig.baseUrlResolutionOverride);
+  }
 
   void onUserSessionExpired() {
     _setSession(null);
@@ -84,6 +125,7 @@ class KVMStateProvider with ChangeNotifier {
   void onLoginSuccess(
       KVMSession session, KVMDevice? device, String email, String password) {
     _setSession(session);
+    _storeServerConfig();
     kvmSessionDatasource.storeLoginEmail(email);
     kvmSessionDatasource.storeLoginPassword(password);
     kvmSessionDatasource.storeDeviceId(device?.id);
@@ -168,6 +210,7 @@ class KVMStateProvider with ChangeNotifier {
 
   Future<bool> setRustdeskServerConfig(KVMServerModel serverConfig) async {
     this.serverConfig = serverConfig;
+    _storeServerConfig();
     notifyListeners();
     return await setServerConfig(null, null, serverConfig.config);
   }
@@ -177,6 +220,7 @@ class KVMStateProvider with ChangeNotifier {
   /// [api] base url picks up the change.
   void updateServerConfig(void Function(KVMServerModel server) update) {
     update(serverConfig);
+    _storeServerConfig();
     notifyListeners();
   }
 

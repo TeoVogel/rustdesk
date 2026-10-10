@@ -54,7 +54,9 @@ class KVMService {
   }
 
   void checkCredentialsAndSendHeartBeat(KVMApi api) {
-    if (model.isStart) {
+    // After a cold start the service can ask for a heartbeat before the KVM
+    // session has been restored.
+    if (model.isStart && kvmState.isKVMSetedup) {
       final currentRustId = model.serverId.value.text.removeAllWhitespace;
       final currentRustPass = model.serverPasswd.value.text;
 

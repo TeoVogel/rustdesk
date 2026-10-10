@@ -10,6 +10,10 @@ class KVMSessionDatasource {
 
   final deviceIdStorageKey = "deviceIdStorageKey";
 
+  final serverNameStorageKey = "serverNameStorageKey";
+  final serverUseHttpsStorageKey = "serverUseHttpsStorageKey";
+  final serverBaseUrlOverrideStorageKey = "serverBaseUrlOverrideStorageKey";
+
   Future<String?> getRefreshToken() => _get(refreshTokenStorageKey);
   void storeRefreshToken(String? token) {
     _store(refreshTokenStorageKey, token);
@@ -32,6 +36,26 @@ class KVMSessionDatasource {
 
   void storeDeviceId(int? deviceId) {
     _store(deviceIdStorageKey, deviceId?.toString());
+  }
+
+  Future<String?> getServerName() => _get(serverNameStorageKey);
+  void storeServerName(String? name) {
+    _store(serverNameStorageKey, name);
+  }
+
+  Future<bool?> getServerUseHttps() async {
+    final useHttpsString = await _get(serverUseHttpsStorageKey);
+    return useHttpsString != null ? useHttpsString == "true" : null;
+  }
+
+  void storeServerUseHttps(bool? useHttps) {
+    _store(serverUseHttpsStorageKey, useHttps?.toString());
+  }
+
+  Future<String?> getServerBaseUrlOverride() =>
+      _get(serverBaseUrlOverrideStorageKey);
+  void storeServerBaseUrlOverride(String? baseUrlOverride) {
+    _store(serverBaseUrlOverrideStorageKey, baseUrlOverride);
   }
 
   void _store(String key, String? value) {

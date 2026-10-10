@@ -12,6 +12,15 @@ abstract class KVMStepState {}
 
 class KVMStepInitializing extends KVMStepState {}
 
+/// Restoring the stored session failed for a reason other than an expired
+/// session (no network, timeout, server error). The stored session is kept so
+/// the user can retry instead of having to log in again.
+class KVMStepRestoreFailed extends KVMStepState {
+  final String message;
+
+  KVMStepRestoreFailed(this.message);
+}
+
 class KVMStepLogin extends KVMStepState {}
 
 class KVMStepRegisterDevice extends KVMStepState with ChangeNotifier {

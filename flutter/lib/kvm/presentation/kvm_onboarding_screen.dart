@@ -28,6 +28,13 @@ class _KVMOnboardingScreenState extends State<KVMOnboardingScreen>
             child: CircularProgressIndicator(),
           );
         }
+        if (nextStep is KVMStepRestoreFailed) {
+          return _RestoreFailedView(
+            message: nextStep.message,
+            onRetry: kvmStateProvider.restoreSession,
+            onLogout: kvmStateProvider.onUserSessionExpired,
+          );
+        }
 
         tabController.index = nextStep is KVMStepLogin
             ? 0
@@ -47,6 +54,54 @@ class _KVMOnboardingScreenState extends State<KVMOnboardingScreen>
           ],
         );
       }),
+    );
+  }
+}
+
+class _RestoreFailedView extends StatelessWidget {
+  const _RestoreFailedView({
+    required this.message,
+    required this.onRetry,
+    required this.onLogout,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 64,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            SizedBox(height: 16),
+            Text(
+              "No se pudo restaurar la sesión",
+              style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 8),
+            Text(message, textAlign: TextAlign.center),
+            SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: onRetry,
+              child: Text("Reintentar"),
+            ),
+            TextButton(
+              onPressed: onLogout,
+              child: Text("Cerrar sesión"),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

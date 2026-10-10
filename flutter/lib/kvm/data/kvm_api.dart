@@ -78,12 +78,20 @@ class KVMApi {
         body: body,
       );
 
+      // A rejected refresh token means the session is gone: surface it as an
+      // auth error so callers send the user back to login instead of retrying.
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        throw KVMAuthError(error: "${response.statusCode}: ${response.body}");
+      }
+
       Map<String, dynamic> json = jsonDecode(response.body);
       if (response.statusCode == 200 && json.containsKey('access_token')) {
         return KVMSession.fromJson(json);
       } else {
         throw KVMApiError(error: "${response.statusCode}: ${response.body}");
       }
+    } on KVMAuthError catch (_) {
+      rethrow;
     } catch (err) {
       debugPrint(err.toString());
       rethrow;
@@ -230,6 +238,10 @@ class KVMApi {
         Uri.parse(url),
         headers: headers,
       );
+
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        throw KVMAuthError(error: "${response.statusCode}: ${response.body}");
+      }
 
       Map<String, dynamic> json = jsonDecode(response.body);
       if (response.statusCode == 200 && json.containsKey('id')) {
