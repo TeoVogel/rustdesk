@@ -303,10 +303,7 @@ class _KVMLoginPageState extends State<KVMLoginPage> {
 
   void _onServerSelected(KVMServerModel server) async {
     baseUrlOverrideController.text = server.baseUrlResolutionOverride ?? "";
-    final result = await context
-        .read<KVMStateProvider>()
-        .setRustdeskServerConfig(server);
-    debugPrint("setRustdeskServerConfig: $result");
+    await context.read<KVMStateProvider>().setRustdeskServerConfig(server);
   }
 
   void _onUseHttpsChanged(bool value) {

@@ -1,25 +1,37 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_device.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_session.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
+import 'package:flutter_hbb/kvm/kvm_logger.dart';
 import 'package:http/http.dart' as http;
 
 class KVMApi {
-
   KVMApi({required this.baseUrl});
+
+  static const _log = KVMLog('Api');
 
   final String baseUrl;
 
   String getKVMApiUrl(String endpoint) => "$baseUrl/$endpoint";
 
-  void _logRequest(String method, String url, Map<String, String> headers,
-      [Object? body]) {
-    debugPrint("KVMApi -> $method $url");
-    debugPrint("KVMApi -> headers: $headers");
-    debugPrint("KVMApi -> body: ${body ?? "<none>"}");
+  /// Logs the request line and the response status/latency. Headers and
+  /// bodies are never logged because they carry credentials and tokens; the
+  /// response body is only included (truncated) on error statuses.
+  Future<http.Response> _send(String method, String url,
+      Future<http.Response> Function() request) async {
+    _log.i("-> $method $url");
+    final stopwatch = Stopwatch()..start();
+    final response = await request();
+    final summary =
+        "<- $method $url ${response.statusCode} (${stopwatch.elapsedMilliseconds}ms)";
+    if (response.statusCode >= 400) {
+      _log.w("$summary ${KVMLog.short(response.body)}");
+    } else {
+      _log.i(summary);
+    }
+    return response;
   }
 
   Map<String, String> getKVMHttpHeaders(String? authToken) {
@@ -37,13 +49,14 @@ class KVMApi {
       headers['Content-Type'] = "application/x-www-form-urlencoded";
       final url = getKVMApiUrl(endpoint);
       final body = {"username": username, "password": password};
-      _logRequest("POST", url, headers, body);
-      final response = await http.post(
-        Uri.parse(url),
-        headers: headers,
-        body: body,
-      );
-      //print(response.body);
+      final response = await _send(
+          "POST",
+          url,
+          () => http.post(
+                Uri.parse(url),
+                headers: headers,
+                body: body,
+              ));
 
       Map<String, dynamic> json = jsonDecode(response.body);
       if (response.statusCode == 200 && json.containsKey('access_token')) {
@@ -56,13 +69,12 @@ class KVMApi {
         throw KVMApiError(error: "${response.statusCode}: ${response.body}");
       }
     } catch (err) {
-      debugPrint(err.toString());
+      _log.e("login failed", err);
       rethrow;
     }
   }
 
-  Future<KVMSession> refreshToken(
-      String deviceId, String refreshToken) async {
+  Future<KVMSession> refreshToken(String deviceId, String refreshToken) async {
     final endpoint = "auth/device/$deviceId/login";
     try {
       Map<String, String> headers = {'accept': 'application/json'};
@@ -71,12 +83,14 @@ class KVMApi {
       final body = jsonEncode({
         "refresh_token": refreshToken,
       });
-      _logRequest("POST", url, headers, body);
-      final response = await http.post(
-        Uri.parse(url),
-        headers: headers,
-        body: body,
-      );
+      final response = await _send(
+          "POST",
+          url,
+          () => http.post(
+                Uri.parse(url),
+                headers: headers,
+                body: body,
+              ));
 
       // A rejected refresh token means the session is gone: surface it as an
       // auth error so callers send the user back to login instead of retrying.
@@ -90,10 +104,11 @@ class KVMApi {
       } else {
         throw KVMApiError(error: "${response.statusCode}: ${response.body}");
       }
-    } on KVMAuthError catch (_) {
+    } on KVMAuthError catch (err) {
+      _log.w("refreshToken: auth rejected (${KVMLog.short(err)})");
       rethrow;
     } catch (err) {
-      debugPrint(err.toString());
+      _log.e("refreshToken failed", err);
       rethrow;
     }
   }
@@ -104,11 +119,13 @@ class KVMApi {
       var headers = getKVMHttpHeaders(authToken);
       headers['Content-Type'] = "application/x-www-form-urlencoded";
       final url = getKVMApiUrl(endpoint);
-      _logRequest("GET", url, headers);
-      final response = await http.get(
-        Uri.parse(url),
-        headers: headers,
-      );
+      final response = await _send(
+          "GET",
+          url,
+          () => http.get(
+                Uri.parse(url),
+                headers: headers,
+              ));
 
       if (response.body.contains("Authentication required.")) {
         throw KVMAuthError();
@@ -121,10 +138,11 @@ class KVMApi {
       } else {
         throw KVMApiError(error: "${response.statusCode}: ${response.body}");
       }
-    } on KVMAuthError catch (_) {
+    } on KVMAuthError catch (err) {
+      _log.w("getTenants: auth rejected (${KVMLog.short(err)})");
       rethrow;
     } catch (err) {
-      debugPrint(err.toString());
+      _log.e("getTenants failed", err);
       rethrow;
     }
   }
@@ -136,11 +154,13 @@ class KVMApi {
       var headers = getKVMHttpHeaders(authToken);
       headers['Content-Type'] = "application/x-www-form-urlencoded";
       final url = "${getKVMApiUrl(endpoint)}?tenant_id=$tenantId";
-      _logRequest("GET", url, headers);
-      final response = await http.get(
-        Uri.parse(url),
-        headers: headers,
-      );
+      final response = await _send(
+          "GET",
+          url,
+          () => http.get(
+                Uri.parse(url),
+                headers: headers,
+              ));
 
       if (response.body.contains("Authentication required.")) {
         throw KVMAuthError();
@@ -153,10 +173,11 @@ class KVMApi {
       } else {
         throw KVMApiError(error: "${response.statusCode}: ${response.body}");
       }
-    } on KVMAuthError catch (_) {
+    } on KVMAuthError catch (err) {
+      _log.w("getFolders: auth rejected (${KVMLog.short(err)})");
       rethrow;
     } catch (err) {
-      debugPrint(err.toString());
+      _log.e("getFolders failed", err);
       rethrow;
     }
   }
@@ -199,12 +220,14 @@ class KVMApi {
           "vendor_ram_gb": 0
         },
       );
-      _logRequest("POST", url, headers, body);
-      final response = await http.post(
-        Uri.parse(url),
-        headers: headers,
-        body: body,
-      );
+      final response = await _send(
+          "POST",
+          url,
+          () => http.post(
+                Uri.parse(url),
+                headers: headers,
+                body: body,
+              ));
 
       Map<String, dynamic> json = jsonDecode(response.body);
       if (response.statusCode == 200 && json.containsKey('id')) {
@@ -212,10 +235,11 @@ class KVMApi {
       } else {
         throw KVMApiError(error: "${response.statusCode}: ${response.body}");
       }
-    } on KVMAuthError catch (_) {
+    } on KVMAuthError catch (err) {
+      _log.w("registerDevice: auth rejected (${KVMLog.short(err)})");
       rethrow;
     } catch (err) {
-      debugPrint(err.toString());
+      _log.e("registerDevice failed", err);
       rethrow;
     }
   }
@@ -233,11 +257,13 @@ class KVMApi {
       var headers = getKVMHttpHeaders(authToken);
       headers['Content-Type'] = "application/json";
       final url = getKVMApiUrl(endpoint);
-      _logRequest("GET", url, headers);
-      final response = await http.get(
-        Uri.parse(url),
-        headers: headers,
-      );
+      final response = await _send(
+          "GET",
+          url,
+          () => http.get(
+                Uri.parse(url),
+                headers: headers,
+              ));
 
       if (response.statusCode == 401 || response.statusCode == 403) {
         throw KVMAuthError(error: "${response.statusCode}: ${response.body}");
@@ -249,10 +275,11 @@ class KVMApi {
       } else {
         throw KVMApiError(error: "${response.statusCode}: ${response.body}");
       }
-    } on KVMAuthError catch (_) {
+    } on KVMAuthError catch (err) {
+      _log.w("getDevice: auth rejected (${KVMLog.short(err)})");
       rethrow;
     } catch (err) {
-      debugPrint(err.toString());
+      _log.e("getDevice failed", err);
       rethrow;
     }
   }
@@ -261,7 +288,7 @@ class KVMApi {
     int deviceId, {
     String? rustId,
     String? rustPass,
-    String? authToken, 
+    String? authToken,
     int? memLoadMb,
   }) async {
     final endpoint = "devices/$deviceId/heartbeat";
@@ -284,12 +311,14 @@ class KVMApi {
                 "MEM_load_mb": memLoadMb,
               },
             );
-      _logRequest("POST", url, headers, body);
-      final response = await http.post(
-        Uri.parse(url),
-        headers: headers,
-        body: body,
-      );
+      final response = await _send(
+          "POST",
+          url,
+          () => http.post(
+                Uri.parse(url),
+                headers: headers,
+                body: body,
+              ));
 
       Map<String, dynamic> json = jsonDecode(response.body);
       if (response.statusCode == 200 && json.containsKey('heartbeat_s')) {
@@ -297,10 +326,11 @@ class KVMApi {
       } else {
         throw KVMApiError(error: "${response.statusCode}: ${response.body}");
       }
-    } on KVMAuthError catch (_) {
+    } on KVMAuthError catch (err) {
+      _log.w("heartbeat: auth rejected (${KVMLog.short(err)})");
       rethrow;
     } catch (err) {
-      debugPrint(err.toString());
+      _log.e("heartbeat failed", err);
       rethrow;
     }
   }

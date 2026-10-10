@@ -12,6 +12,7 @@ import 'package:flutter_hbb/kvm/domain/models/kvm_folder.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_server_config.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_session.dart';
 import 'package:flutter_hbb/kvm/domain/models/kvm_tenant.dart';
+import 'package:flutter_hbb/kvm/kvm_logger.dart';
 import 'package:flutter_hbb/kvm/kvm_utils.dart';
 import 'package:flutter_hbb/kvm/presentation/kvm_state.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
@@ -24,12 +25,34 @@ class KVMStateProvider with ChangeNotifier {
 
   static const _restoreTimeout = Duration(seconds: 20);
 
+  static const _log = KVMLog('State');
+
   final kvmSessionDatasource = KVMSessionDatasource();
 
   final loginStepState = KVMStepLogin();
   final registerDeviceStepState = KVMStepRegisterDevice();
   final requestPermissionsStepState = KVMStepRequestPerissions();
-  KVMStepState nextStepState = KVMStepInitializing();
+  KVMStepState _nextStepState = KVMStepInitializing();
+
+  KVMStepState get nextStepState => _nextStepState;
+
+  /// Every onboarding step change goes through here so it shows up in the log.
+  set nextStepState(KVMStepState step) {
+    if (step.runtimeType != _nextStepState.runtimeType) {
+      _log.i("step ${_stepName(_nextStepState)} -> ${_stepName(step)}");
+    }
+    _nextStepState = step;
+  }
+
+  static String _stepName(KVMStepState step) => switch (step) {
+        KVMStepInitializing() => "initializing",
+        KVMStepRestoreFailed() => "restoreFailed",
+        KVMStepLogin() => "login",
+        KVMStepRegisterDevice() => "registerDevice",
+        KVMStepRequestPerissions() => "requestPermissions",
+        KVMStepReady() => "ready",
+        _ => step.runtimeType.toString(),
+      };
 
   KVMSession? session;
   KVMDevice? device;
@@ -51,6 +74,7 @@ class KVMStateProvider with ChangeNotifier {
       nextStepState = KVMStepInitializing();
       notifyListeners();
     }
+    _log.i("restoreSession: start");
     try {
       // The server must be restored first so the refresh token is sent to the
       // backend that issued it.
@@ -59,6 +83,8 @@ class KVMStateProvider with ChangeNotifier {
       final refreshToken = await kvmSessionDatasource.getRefreshToken();
       final deviceId = await kvmSessionDatasource.getDeviceId();
       if (refreshToken == null || deviceId == null) {
+        _log.i("restoreSession: no stored session "
+            "(refreshToken=${refreshToken != null}, deviceId=$deviceId)");
         onUserSessionExpired();
         return;
       }
@@ -69,11 +95,14 @@ class KVMStateProvider with ChangeNotifier {
       final device = await api
           .getDevice(deviceId, authToken: session.authToken)
           .timeout(_restoreTimeout);
+      _log.i("restoreSession: ok (deviceId=$deviceId, "
+          "deviceFound=${device != null})");
       onSessionRestored(session, device);
     } on KVMAuthError catch (_) {
+      _log.w("restoreSession: stored session rejected by server");
       onUserSessionExpired();
     } catch (e) {
-      debugPrint("KVM session restore failed: $e");
+      _log.e("restoreSession failed", e);
       nextStepState = KVMStepRestoreFailed(
         e is KVMApiError ? e.message : e.toString(),
       );
@@ -94,7 +123,12 @@ class KVMStateProvider with ChangeNotifier {
     server.baseUrlResolutionOverride =
         await kvmSessionDatasource.getServerBaseUrlOverride();
     serverConfig = server;
+    _log.i("server restored: ${_describeServer(server)}"
+        "${serverName != null && serverName != server.name ? " (stored '$serverName' not found)" : ""}");
   }
+
+  static String _describeServer(KVMServerModel server) =>
+      "${server.name} ${server.resolvedBaseUrl}";
 
   void _storeServerConfig() {
     kvmSessionDatasource.storeServerName(serverConfig.name);
@@ -104,6 +138,7 @@ class KVMStateProvider with ChangeNotifier {
   }
 
   void onUserSessionExpired() {
+    _log.i("session cleared, login required");
     _setSession(null);
     kvmSessionDatasource.storeLoginEmail(null);
     kvmSessionDatasource.storeLoginPassword(null);
@@ -124,6 +159,7 @@ class KVMStateProvider with ChangeNotifier {
 
   void onLoginSuccess(
       KVMSession session, KVMDevice? device, String email, String password) {
+    _log.i("login ok (deviceId=${device?.id})");
     _setSession(session);
     _storeServerConfig();
     kvmSessionDatasource.storeLoginEmail(email);
@@ -143,6 +179,7 @@ class KVMStateProvider with ChangeNotifier {
   }
 
   void onDeviceRegistered(KVMDevice device) {
+    _log.i("device set (deviceId=${device.id})");
     this.device = device;
     kvmSessionDatasource.storeDeviceId(device.id);
     nextStepState = requestPermissionsStepState;
@@ -153,6 +190,7 @@ class KVMStateProvider with ChangeNotifier {
     try {
       return await request();
     } on KVMAuthError catch (_) {
+      _log.w("api request rejected, session expired");
       onUserSessionExpired();
     } on KVMApiError catch (e) {
       return Future.error(e);
@@ -161,6 +199,7 @@ class KVMStateProvider with ChangeNotifier {
   }
 
   Future<KVMDevice?> login(String email, String password) async {
+    _log.i("login: start (server=${_describeServer(serverConfig)})");
     return _apiRequest(() async {
       final (session, device) = await api.login(
         email,
@@ -182,8 +221,10 @@ class KVMStateProvider with ChangeNotifier {
   Future<KVMDevice> registerDevice(KVMFolder folder, String deviceName) async {
     final trimmedDeviceName = deviceName.trim();
     if (trimmedDeviceName.isEmpty) {
+      _log.w("registerDevice: empty device name");
       return Future.error("El nombre no puede ser vacío");
     }
+    _log.i("registerDevice: start (folderId=${folder.id})");
     return _apiRequest(() async {
       final device = await api.registerDevice(
         folder,
@@ -209,17 +250,26 @@ class KVMStateProvider with ChangeNotifier {
   }
 
   Future<bool> setRustdeskServerConfig(KVMServerModel serverConfig) async {
+    _log.i("server selected: ${_describeServer(serverConfig)}");
     this.serverConfig = serverConfig;
     _storeServerConfig();
     notifyListeners();
-    return await setServerConfig(null, null, serverConfig.config);
+    final applied = await setServerConfig(null, null, serverConfig.config);
+    if (!applied) {
+      _log.w("rustdesk server config not applied for ${serverConfig.name}");
+    }
+    return applied;
   }
 
   /// Mutates the currently selected [serverConfig] (e.g. its `useHttps` flag or
   /// `baseUrlResolutionOverride`) and notifies listeners so the resolved
   /// [api] base url picks up the change.
   void updateServerConfig(void Function(KVMServerModel server) update) {
+    final previousUrl = serverConfig.resolvedBaseUrl;
     update(serverConfig);
+    if (serverConfig.resolvedBaseUrl != previousUrl) {
+      _log.i("server url changed: ${serverConfig.resolvedBaseUrl}");
+    }
     _storeServerConfig();
     notifyListeners();
   }

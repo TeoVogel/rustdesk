@@ -29,7 +29,6 @@ class KVMStepRegisterDevice extends KVMStepState with ChangeNotifier {
 
   void setSelectedTenant(KVMTenant? selectedTenant) {
     this.selectedTenant = selectedTenant;
-    debugPrint("selected tenant");
     notifyListeners();
   }
 
